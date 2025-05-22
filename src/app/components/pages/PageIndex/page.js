@@ -35,7 +35,7 @@ export default function Home() {
         </p>
         <div className="space-x-4">
           <Link
-            href="/login"
+            href="login"
             className="bg-indigo-600 text-white px-6 py-3 rounded-lg text-lg hover:bg-indigo-700"
           >
             Comenzar ahora
