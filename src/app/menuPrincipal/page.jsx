@@ -1,10 +1,16 @@
 export default function MenuPrincipal() {
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-3xl font-bold text-gray-800">
-        ¡Bienvenido al Menú Principal!
-      </h1>
-      {/* Aquí agregarás tu contenido posteriormente */}
+    <div className="container py-4">
+      <div className="card shadow">
+        <div className="card-body">
+          <h1 className="card-title h3 text-dark">
+            ¡Bienvenido al Menú Principal!
+          </h1>
+          <p className="card-text text-muted">
+            Desde aquí podrás gestionar tu inventario, ventas y más.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
