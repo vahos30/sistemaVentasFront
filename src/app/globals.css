@@ -24,3 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/*Estilos de botones de menu cliente*/
+.btn-lg {
+  font-size: 1.25rem;
+  padding: 1rem 1.5rem;
+}
