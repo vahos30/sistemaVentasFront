@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { obtenerClientes } from "@/app/services/clienteServices";
+import BotonVolver from "../../components/BotonVolver"; // sin llaves
 
 export default function TodosClientes() {
   const [clientes, setClientes] = useState([]);
@@ -63,6 +64,10 @@ export default function TodosClientes() {
               )}
             </tbody>
           </table>
+          {/* Botón Volver centrado abajo */}
+          <div className="text-center mt-4">
+            <BotonVolver texto="← Volver" />
+          </div>
         </div>
       )}
     </div>
