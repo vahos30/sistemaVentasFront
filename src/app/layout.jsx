@@ -1,5 +1,6 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./globals.css";
+import Notificaciones from "./components/Notificaciones";
 
 export const metadata = {
   title: "Sistema de Ventas",
@@ -10,6 +11,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body>{children}</body>
+      <Notificaciones />
     </html>
   );
 }
