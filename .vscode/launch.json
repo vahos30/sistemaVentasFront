@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Launch Frontend (Next.js)",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}",
+      "skipFiles": ["<node_internals>/**"], // Ignora archivos internos de Node
+      "sourceMaps": true // Para mejor depuración
+    }
+  ]
+}

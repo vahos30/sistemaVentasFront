@@ -30,3 +30,18 @@ body {
   font-size: 1.25rem;
   padding: 1rem 1.5rem;
 }
+
+/*Estilo boton volver*/
+.boton-volver {
+  background-color: #5bc0de; /* Celeste suave */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.boton-volver:hover {
+  background-color: #31b0d5; /* Un poco más oscuro al pasar el mouse */
+}

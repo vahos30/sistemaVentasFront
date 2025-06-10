@@ -13,7 +13,7 @@ export default function Clientes() {
             <Link href="/Clientes/todos" className="btn btn-primary btn-lg">
               Ver todos los clientes
             </Link>
-            <Link href="/clientes/nuevo" className="btn btn-success btn-lg">
+            <Link href="/Clientes/nuevo" className="btn btn-success btn-lg">
               Crear un nuevo cliente
             </Link>
           </div>
