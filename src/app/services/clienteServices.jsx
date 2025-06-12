@@ -106,3 +106,22 @@ export const actualizarCliente = async (id, datosActualizados) => {
     throw error;
   }
 };
+
+// Método para eliminar un cliente
+export const eliminarCliente = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Error al eliminar cliente");
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error eliminando cliente:", error.message);
+    throw error;
+  }
+};
