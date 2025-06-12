@@ -3,7 +3,11 @@
 import { useState } from "react";
 import BotonGuardar from "@/app/components/BotonGuardar";
 import BotonVolver from "@/app/components/BotonVolver";
-import { CrearClienteNuevo } from "@/app/services/clienteServices";
+import {
+  CrearClienteNuevo,
+  actualizarCliente,
+} from "@/app/services/clienteServices";
+import { obtenerClientePorDocumento } from "@/app/services/clienteServices";
 import { toast } from "react-toastify";
 
 export default function CrearClientePage() {
@@ -16,6 +20,8 @@ export default function CrearClientePage() {
     email: "",
   });
 
+  const [clienteId, setClienteId] = useState(null);
+  const [clienteExistente, setClienteExistente] = useState(false);
   const [errors, setErrors] = useState({});
 
   const regex = {
@@ -75,13 +81,25 @@ export default function CrearClientePage() {
     return Object.keys(nuevosErrores).length === 0;
   };
 
+  // src/app/Clientes/nuevo/page.jsx
   const handleGuardar = async () => {
     if (!validarCampos()) return;
 
     try {
-      await CrearClienteNuevo(formData);
-      toast.success("Cliente creado exitosamente");
+      if (clienteExistente && clienteId) {
+        const datosActualizados = {
+          ...formData,
+          Id: clienteId,
+        };
 
+        await actualizarCliente(clienteId, datosActualizados);
+        toast.success("✅ Cliente actualizado exitosamente");
+      } else {
+        const nuevoCliente = await CrearClienteNuevo(formData);
+        toast.success("✅ Cliente creado exitosamente");
+      }
+
+      // Limpiar formulario
       setFormData({
         nombre: "",
         apellido: "",
@@ -91,11 +109,47 @@ export default function CrearClientePage() {
         email: "",
       });
       setErrors({});
+      setClienteExistente(false);
+      setClienteId(null);
     } catch (error) {
-      toast.error(
-        "❌ Error al crear el cliente. Por favor, intente nuevamente."
-      );
-      console.error("Error al crear cliente:", error);
+      toast.error(`❌ ${error.message || "Error al guardar el cliente"}`);
+      console.error("Error:", error);
+    }
+  };
+
+  const verificarClienteExistente = async () => {
+    const numeroDocumento = formData.NumeroDocumento.trim();
+    if (!numeroDocumento) return;
+
+    try {
+      const cliente = await obtenerClientePorDocumento(numeroDocumento);
+
+      if (cliente) {
+        // Cliente encontrado - cargar datos
+        setFormData({
+          nombre: cliente.nombre,
+          apellido: cliente.apellido,
+          NumeroDocumento: cliente.numeroDocumento,
+          telefono: cliente.telefono,
+          direccion: cliente.direccion,
+          email: cliente.email,
+        });
+
+        setClienteId(cliente.id);
+        setClienteExistente(true);
+        toast.warn(
+          "⚠️ El cliente ya está registrado. Se han cargado sus datos."
+        );
+      } else {
+        // Cliente NO encontrado - resetear estado
+        setClienteExistente(false);
+        setClienteId(null);
+        console.log("Cliente no encontrado - se puede crear uno nuevo");
+      }
+    } catch (error) {
+      // Solo manejar errores reales (no el 404)
+      toast.error("Error al verificar el cliente");
+      console.error("Error en verificación:", error);
     }
   };
 
@@ -149,6 +203,8 @@ export default function CrearClientePage() {
                 name="NumeroDocumento"
                 value={formData.NumeroDocumento}
                 onChange={handleChange}
+                onBlur={verificarClienteExistente}
+                disabled={clienteExistente}
               />
               {errors.NumeroDocumento && (
                 <div className="invalid-feedback">{errors.NumeroDocumento}</div>
