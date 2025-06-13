@@ -264,8 +264,8 @@ export default function CrearClientePage() {
               <BotonGuardar onClick={handleGuardar} texto="Guardar Cliente" />
             </div>
 
-            <div className="text-center mt-4">
-              <BotonVolver texto="← Volver" />
+            <div className="text-center mt-4" href="/Clientes">
+              <BotonVolver texto="← Volver al Modulo de Clientes" />
             </div>
           </form>
         </div>

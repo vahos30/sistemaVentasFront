@@ -125,3 +125,21 @@ export const eliminarCliente = async (id) => {
     throw error;
   }
 };
+// Obtener cliente por ID
+export const obtenerClientePorId = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Cliente no encontrado");
+      }
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error obteniendo cliente por ID:", error.message);
+    throw error;
+  }
+};
