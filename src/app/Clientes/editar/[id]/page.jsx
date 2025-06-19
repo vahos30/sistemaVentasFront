@@ -52,7 +52,7 @@ export default function EditarCliente({ params }) {
       toast.success("¡Cliente actualizado exitosamente!", {
         position: "top-center",
         autoClose: 1000,
-        onClose: () => router.push("/Clientes/todos"),
+        onClose: () => router.replace("/Clientes/todos"),
       });
     } catch (error) {
       console.error("Error actualizando cliente:", error);
@@ -97,7 +97,7 @@ export default function EditarCliente({ params }) {
           </p>
           <BotonVolver
             texto="Volver al listado"
-            onClick={() => router.push("/Clientes/todos")}
+            onClick={() => router.replace("/Clientes/todos")}
             className="mt-3"
           />
         </div>

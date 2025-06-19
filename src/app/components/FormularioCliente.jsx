@@ -12,6 +12,7 @@ export default function FormularioCliente({
     datosIniciales || {
       nombre: "",
       apellido: "",
+      tipoDocumento: "",
       numeroDocumento: "",
       telefono: "",
       direccion: "",
@@ -71,6 +72,32 @@ export default function FormularioCliente({
               />
               {errores.apellido && (
                 <div className="invalid-feedback">{errores.apellido}</div>
+              )}
+            </div>
+
+            {/* Campo Tipo de Documento */}
+            <div className="col-md-6">
+              <label className="form-label">Tipo de Documento *</label>
+              <select
+                className={`form-select ${
+                  errores.tipoDocumento ? "is-invalid" : ""
+                }`}
+                name="tipoDocumento"
+                value={formData.tipoDocumento}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Seleccione un tipo de Documento</option>
+                <option value="Cédula de Ciudadanía">
+                  Cédula de Ciudadanía
+                </option>
+                <option value="Cédula de Extranjería">
+                  Cédula de Extranjería
+                </option>
+                <option value="Pasaporte">Pasaporte</option>
+              </select>
+              {errores.tipoDocumento && (
+                <div className="invalid-feedback">{errores.tipoDocumento}</div>
               )}
             </div>
 

@@ -14,6 +14,7 @@ export default function CrearClientePage() {
   const [formData, setFormData] = useState({
     nombre: "",
     apellido: "",
+    tipoDocumento: "",
     NumeroDocumento: "",
     telefono: "",
     direccion: "",
@@ -27,6 +28,7 @@ export default function CrearClientePage() {
   const regex = {
     nombre: /^[a-zA-ZÀ-ÿ\s]+$/,
     apellido: /^[a-zA-ZÀ-ÿ\s]+$/,
+    tipoDocumento: /^(Cédula de Ciudadanía|Cédula de Extranjería|Pasaporte)$/,
     NumeroDocumento: /^[a-zA-Z0-9]+$/,
     telefono: /^[0-9+\s()-]+$/,
     direccion: /^[a-zA-Z0-9\s.,#\-\/]+$/,
@@ -36,6 +38,7 @@ export default function CrearClientePage() {
   const mensajes = {
     nombre: "Solo se permiten letras y espacios.",
     apellido: "Solo se permiten letras y espacios.",
+    tipoDocumento: "Debe seleccionar un tipo de documento válido.",
     NumeroDocumento: "Solo se permiten letras y números.",
     telefono: "Solo se permite números y caracteres válidos como +, (), -.",
     direccion: "Solo letras, números y caracteres como , . - /",
@@ -103,6 +106,7 @@ export default function CrearClientePage() {
       setFormData({
         nombre: "",
         apellido: "",
+        tipoDocumento: "",
         NumeroDocumento: "",
         telefono: "",
         direccion: "",
@@ -129,6 +133,7 @@ export default function CrearClientePage() {
         setFormData({
           nombre: cliente.nombre,
           apellido: cliente.apellido,
+          tipoDocumento: cliente.tipoDocumento || "",
           NumeroDocumento: cliente.numeroDocumento,
           telefono: cliente.telefono,
           direccion: cliente.direccion,
@@ -189,6 +194,31 @@ export default function CrearClientePage() {
               />
               {errors.apellido && (
                 <div className="invalid-feedback">{errors.apellido}</div>
+              )}
+            </div>
+
+            {/** Tipo de Documento */}
+            <div className="mb-3">
+              <label className="form-label">Tipo de Documento:</label>
+              <select
+                name="tipoDocumento"
+                className={`form-select ${
+                  errors.tipoDocumento ? "is-invalid" : ""
+                }`}
+                value={formData.tipoDocumento}
+                onChange={handleChange}
+              >
+                <option value="">Seleccione un tipo de Documento</option>
+                <option value="Cédula de Ciudadanía">
+                  Cédula de Ciudadanía
+                </option>
+                <option value="Cédula de Extranjería">
+                  Cédula de Extranjería
+                </option>
+                <option value="Pasaporte">Pasaporte</option>
+              </select>
+              {errors.tipoDocumento && (
+                <div className="invalid-feedback">{errors.tipoDocumento}</div>
               )}
             </div>
 

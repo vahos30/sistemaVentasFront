@@ -16,11 +16,11 @@ export default function TodosClientes() {
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
   const router = useRouter();
-  const isFirstRun = useRef(true); // Controlador para primera ejecución
+  const isFirstRun = useRef(true);
+  const TOAST_ID_CLIENTES = "clientes-cargados"; // ✅ ID único para evitar cierres innecesarios
 
   // Cargar clientes al montar el componente
   useEffect(() => {
-    // Evitar doble ejecución en modo desarrollo
     if (!isFirstRun.current) return;
     isFirstRun.current = false;
 
@@ -30,13 +30,14 @@ export default function TodosClientes() {
         setClientes(data);
         setFiltrados(data);
         toast.success("Clientes cargados exitosamente", {
-          autoClose: 1000,
+          autoClose: 2000,
           icon: "👥",
+          toastId: TOAST_ID_CLIENTES, // ✅ evita duplicados o cierres accidentales
         });
       } catch (error) {
         console.error("Error al cargar clientes:", error);
         toast.error("Error al cargar clientes: " + error.message, {
-          autoClose: 4000,
+          autoClose: 2000,
         });
       } finally {
         setCargando(false);
@@ -50,8 +51,7 @@ export default function TodosClientes() {
   useEffect(() => {
     if (!busqueda.trim()) {
       setFiltrados(clientes);
-      toast.dismiss(); // Limpiar toast si no hay búsqueda
-      return;
+      return; // ✅ ya no se usa toast.dismiss()
     }
 
     const termino = busqueda.toLowerCase();
@@ -66,7 +66,6 @@ export default function TodosClientes() {
 
     setFiltrados(resultados);
 
-    // Mostrar toast si no hay resultados
     if (resultados.length === 0 && busqueda.trim()) {
       toast.info(`No se encontraron clientes para "${busqueda}"`, {
         autoClose: 2000,
@@ -74,28 +73,24 @@ export default function TodosClientes() {
     }
   }, [busqueda, clientes]);
 
-  // Función para ejecutar la eliminación
   const ejecutarEliminacion = async (id) => {
     try {
       await eliminarCliente(id);
-
-      // Actualizar listados
       const nuevosClientes = clientes.filter((cliente) => cliente.id !== id);
       setClientes(nuevosClientes);
       setFiltrados(filtrados.filter((cliente) => cliente.id !== id));
 
       toast.success("Cliente eliminado exitosamente", {
         icon: "🗑️",
-        autoClose: 1000,
+        autoClose: 2000,
       });
     } catch (error) {
       toast.error("Error al eliminar cliente: " + error.message, {
-        autoClose: 3000,
+        autoClose: 2000,
       });
     }
   };
 
-  // Función para mostrar confirmación de eliminación
   const confirmarEliminacion = (id) => {
     toast.info(
       <div>
@@ -143,14 +138,13 @@ export default function TodosClientes() {
         />
       </div>
 
-      {/* Botón para crear nuevo cliente */}
       <div className="mb-4 text-end">
         <Link
           href="/Clientes/nuevo"
           className="btn btn-primary"
           onClick={() =>
             toast.info("Creando nuevo cliente...", {
-              autoClose: 1000,
+              autoClose: 2000,
             })
           }
         >
@@ -158,7 +152,6 @@ export default function TodosClientes() {
         </Link>
       </div>
 
-      {/* Campo de búsqueda */}
       <div className="input-group mb-4 shadow-sm">
         <input
           type="text"
@@ -184,6 +177,7 @@ export default function TodosClientes() {
               <tr>
                 <th>Nombre</th>
                 <th>Apellido</th>
+                <th>Tipo Documento</th>
                 <th>N° Documento</th>
                 <th>Teléfono</th>
                 <th>Dirección</th>
@@ -197,6 +191,7 @@ export default function TodosClientes() {
                   <tr key={cliente.id}>
                     <td>{cliente.nombre}</td>
                     <td>{cliente.apellido}</td>
+                    <td>{cliente.tipoDocumento}</td>
                     <td>{cliente.numeroDocumento}</td>
                     <td>{cliente.telefono}</td>
                     <td>{cliente.direccion}</td>
@@ -208,7 +203,7 @@ export default function TodosClientes() {
                           className="btn btn-sm btn-warning"
                           onClick={() =>
                             toast.info("Editando cliente...", {
-                              autoClose: 1000,
+                              autoClose: 2000,
                             })
                           }
                         >
