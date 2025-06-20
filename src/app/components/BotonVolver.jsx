@@ -11,7 +11,12 @@ export default function BotonVolver({ texto = "Volver" }) {
   };
 
   return (
-    <button onClick={manejarClick} className="btn mt-3 boton-volver">
+    <button
+      onClick={manejarClick}
+      className="btn boton-volver-profesional"
+      aria-label={`Volver a la página anterior`}
+    >
+      <i className="bi bi-arrow-left-circle-fill me-2"></i>
       {texto}
     </button>
   );

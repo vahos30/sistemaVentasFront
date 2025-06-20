@@ -1,8 +1,19 @@
+/* src/app/globals.css */
 @import "tailwindcss";
 
+/* Variables y temas */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  --primary-color: #2c3e50;
+  --secondary-color: #3498db;
+  --accent-color: #1abc9c;
+  --dark-color: #1a252f;
+  --light-color: #ecf0f1;
+
+  --menu-width: 280px;
+  --transition-speed: 0.3s;
 }
 
 @theme inline {
@@ -19,29 +30,235 @@
   }
 }
 
+/* Estilos base */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden;
 }
 
-/*Estilos de botones de menu cliente*/
-.btn-lg {
-  font-size: 1.25rem;
-  padding: 1rem 1.5rem;
+/* ===== COMPONENTES PRINCIPALES ===== */
+
+/* Barra superior */
+.bg-primary-gradient {
+  background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 0.75rem 1rem;
+  position: relative;
+  z-index: 1100;
 }
 
-/*Estilo boton volver*/
-.boton-volver {
-  background-color: #5bc0de; /* Celeste suave */
+.navbar-brand {
+  font-size: 1.5rem;
+  letter-spacing: 0.5px;
+}
+
+/* Botón de menú */
+.btn-menu-toggle {
   color: white;
-  border: none;
-  padding: 10px 20px;
-  font-weight: 500;
-  border-radius: 8px;
-  transition: background-color 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-speed) ease;
+  background-color: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+.btn-menu-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.boton-volver:hover {
-  background-color: #31b0d5; /* Un poco más oscuro al pasar el mouse */
+.navbar-toggler-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.25rem;
+}
+
+.menu-text {
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+/* Menú lateral */
+.menu-lateral {
+  width: var(--menu-width);
+  position: relative; /* ya no sticky, para que haga scroll */
+  background-color: var(--primary-color);
+  box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left var(--transition-speed) ease;
+}
+
+.menu-abierto {
+  margin-left: 0; /* en posición natural */
+}
+
+.menu-cerrado {
+  margin-left: calc(-1 * var(--menu-width)); /* fuera del viewport */
+}
+
+/* Cabecera del menú */
+.menu-header {
+  background-color: var(--dark-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+}
+
+.user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: var(--accent-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+.user-avatar i {
+  font-size: 1.75rem;
+}
+
+/* Items del menú */
+.nav {
+  padding: 1rem 0;
+}
+
+.nav-item {
+  margin: 0.25rem 0;
+}
+
+.nav-link {
+  color: var(--light-color) !important;
+  padding: 0.75rem 1.5rem;
+  transition: all var(--transition-speed);
+  border-left: 4px solid transparent;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-left: 4px solid var(--accent-color);
+  padding-left: 1.75rem;
+}
+.nav-link.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-left: 4px solid var(--accent-color);
+  font-weight: 500;
+}
+.nav-link i {
+  transition: transform var(--transition-speed);
+  width: 24px;
+  text-align: center;
+}
+.nav-link:hover i {
+  transform: scale(1.1);
+}
+
+/* Pie del menú */
+.menu-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--dark-color);
+  padding: 1rem;
+  margin-top: auto;
+}
+
+/* Contenido principal */
+.contenido-principal {
+  flex: 1; /* ocupa todo el espacio junto al menú */
+  padding: 2rem;
+  transition: margin-left var(--transition-speed) ease;
+}
+
+/* Clases dinámicas para abrir/cerrar */
+/*
+.con-margen {
+  margin-left: var(--menu-width); 
+}
+.sin-margen {
+  margin-left: 0; 
+}
+*/
+
+/* ===== COMPONENTES SECUNDARIOS ===== */
+/* ... el resto de tus estilos secundarios (botones, animaciones, etc.) permanecen iguales ... */
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .menu-lateral {
+    width: 100%;
+    z-index: 1050;
+  }
+
+  .contenido-principal {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .btn-menu-toggle .menu-text {
+    display: none;
+  }
+}
+
+/* Iconos */
+.bi {
+  vertical-align: middle;
+}
+
+/*Boton volver*/
+
+.boton-volver-profesional {
+  background: linear-gradient(
+    90deg,
+    var(--secondary-color),
+    var(--accent-color)
+  );
+  color: #fff !important;
+  border: none;
+  border-radius: 30px;
+  padding: 0.5rem 1.5rem;
+  font-weight: 500;
+  font-size: 1rem;
+  box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+  transition: background 0.3s, transform 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.boton-volver-profesional:hover {
+  background: linear-gradient(
+    90deg,
+    var(--accent-color),
+    var(--secondary-color)
+  );
+  color: #fff !important;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 4px 16px rgba(44, 62, 80, 0.12);
+}
+
+/*Esyilos de las opciones del menu*/
+
+.nav-link span {
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: color 0.2s;
+  color: #ecf0f1;
+}
+
+.nav-link.active span {
+  color: var(--accent-color);
+  text-shadow: 0 2px 8px rgba(26, 188, 156, 0.08);
+}
+
+.nav-link:hover span {
+  color: var(--accent-color);
 }
