@@ -22,6 +22,34 @@ export const obtenerClientes = async () => {
   }
 };
 
+// Método para obtener un cliente por número de documento
+export const obtenerClientePorDocumento = async (numeroDocumento) => {
+  try {
+    const response = await fetch(
+      `${API_URL}/por-documento/${numeroDocumento}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (response.status === 404) {
+      return null; // Cliente no encontrado - caso normal
+    }
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener cliente: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error al buscar cliente por documento:", error.message);
+    throw error;
+  }
+};
+
 //metodo para crear un nuevo cliente
 export const CrearClienteNuevo = async (cliente) => {
   try {
@@ -41,5 +69,77 @@ export const CrearClienteNuevo = async (cliente) => {
     throw new Error(
       "No se pudo Crear el Cliente error al conectar con el Servidor, Intente nuevamente o Comuniquese con El administrador"
     );
+  }
+};
+
+// metodo para actualizar un cliente
+
+// src/services/clienteService.js
+export const actualizarCliente = async (id, datosActualizados) => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datosActualizados),
+    });
+
+    if (!response.ok) {
+      // Intenta obtener el mensaje de error del backend
+      let errorMessage = `Error ${response.status}`;
+      try {
+        const errorData = await response.text();
+        if (errorData) errorMessage += `: ${errorData}`;
+      } catch (e) {}
+
+      throw new Error(errorMessage);
+    }
+
+    // Manejar respuestas vacías (204 No Content)
+    if (response.status === 204) {
+      console.log("Cliente actualizado exitosamente (sin contenido)");
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error actualizando cliente", error.message);
+    throw error;
+  }
+};
+
+// Método para eliminar un cliente
+export const eliminarCliente = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Error al eliminar cliente");
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error eliminando cliente:", error.message);
+    throw error;
+  }
+};
+// Obtener cliente por ID
+export const obtenerClientePorId = async (id) => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Cliente no encontrado");
+      }
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error obteniendo cliente por ID:", error.message);
+    throw error;
   }
 };
