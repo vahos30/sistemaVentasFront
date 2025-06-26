@@ -28,8 +28,9 @@ export default function CrearClientePage() {
   const regex = {
     nombre: /^[a-zA-ZÀ-ÿ\s]+$/,
     apellido: /^[a-zA-ZÀ-ÿ\s]+$/,
-    tipoDocumento: /^(Cédula de Ciudadanía|Cédula de Extranjería|Pasaporte)$/,
-    NumeroDocumento: /^[a-zA-Z0-9]+$/,
+    tipoDocumento:
+      /^(Cédula de Ciudadanía|Cédula de Extranjería|Pasaporte|Nit)$/,
+    NumeroDocumento: /^[a-zA-Z0-9\-]+$/,
     telefono: /^[0-9+\s()-]+$/,
     direccion: /^[a-zA-Z0-9\s.,#\-\/]+$/,
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -84,7 +85,6 @@ export default function CrearClientePage() {
     return Object.keys(nuevosErrores).length === 0;
   };
 
-  // src/app/Clientes/nuevo/page.jsx
   const handleGuardar = async () => {
     if (!validarCampos()) return;
 
@@ -216,6 +216,7 @@ export default function CrearClientePage() {
                   Cédula de Extranjería
                 </option>
                 <option value="Pasaporte">Pasaporte</option>
+                <option value="Nit">Nit</option>
               </select>
               {errors.tipoDocumento && (
                 <div className="invalid-feedback">{errors.tipoDocumento}</div>

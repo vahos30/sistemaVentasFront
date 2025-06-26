@@ -36,7 +36,10 @@ export async function actualizarProducto(id, producto) {
   if (!respuesta.ok) {
     throw new Error("Error al actualizar el producto");
   }
-  return await respuesta.json();
+  // Si la respuesta no tiene contenido, no intentes parsear JSON
+  if (respuesta.status === 204) return;
+  const text = await respuesta.text();
+  return text ? JSON.parse(text) : null;
 }
 
 // Eliminar un producto
