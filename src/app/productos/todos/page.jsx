@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { obtenerProductos } from "@/app/services/productosService";
+import {
+  obtenerProductos,
+  eliminarProducto,
+} from "@/app/services/productosService";
 import BotonVolver from "../../components/BotonVolver";
 import { toast } from "react-toastify";
 
@@ -53,11 +56,67 @@ export default function TodosProductos() {
     setFiltrados(resultados);
   }, [busqueda, productos]);
 
+  const ejecutarEliminacion = async (id) => {
+    try {
+      await eliminarProducto(id);
+      setProductos((prev) => prev.filter((p) => p.id !== id));
+      setFiltrados((prev) => prev.filter((p) => p.id !== id));
+      toast.success("Producto eliminado exitosamente", {
+        icon: "🗑️",
+        autoClose: 2000,
+      });
+    } catch (error) {
+      toast.error(
+        "No se puede eliminar el prodcuto por que esta asociado a una compra, recibo o Factura: " +
+          error.message,
+        {
+          autoClose: 4000,
+        }
+      );
+    }
+  };
+
+  const confirmarEliminacion = (id) => {
+    toast.info(
+      <div>
+        <p className="mb-2">
+          ¿Está seguro de eliminar este producto? Esta acción no podrá
+          deshacerse.
+        </p>
+        <div className="d-flex gap-2 justify-content-end">
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => toast.dismiss()}
+          >
+            Cancelar
+          </button>
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={() => {
+              toast.dismiss();
+              ejecutarEliminacion(id);
+            }}
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>,
+      {
+        position: "top-center",
+        autoClose: false,
+        closeButton: false,
+        closeOnClick: false,
+        draggable: false,
+        className: "toast-confirmacion",
+      }
+    );
+  };
+
   return (
     <div className="container py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Listado de Productos</h2>
-        <BotonVolver texto="← Volver al Menú" />
+        <BotonVolver texto="← Volver al Modulo de Productos" />
       </div>
 
       {/* Barra de búsqueda */}
@@ -90,6 +149,7 @@ export default function TodosProductos() {
                 <th>Referencia</th>
                 <th>Cantidad en Stock</th>
                 <th>Disponible</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -108,11 +168,27 @@ export default function TodosProductos() {
                         <span className="badge bg-danger">No</span>
                       )}
                     </td>
+                    <td>
+                      <div className="d-flex gap-1">
+                        <a
+                          href={`/productos/editar/${producto.id}`}
+                          className="btn btn-sm btn-warning"
+                        >
+                          Editar
+                        </a>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => confirmarEliminacion(producto.id)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center text-muted py-4">
+                  <td colSpan={7} className="text-center text-muted py-4">
                     {busqueda
                       ? `No se encontraron productos para "${busqueda}"`
                       : "No hay productos registrados"}

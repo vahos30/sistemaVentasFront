@@ -87,7 +87,10 @@ export default function MenuLayout({ children }) {
               </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link d-flex align-items-center" href="#">
+              <Link
+                className="nav-link d-flex align-items-center"
+                href="ventas"
+              >
                 <i className="bi bi-receipt me-3 fs-5"></i>
                 <span>Ventas</span>
               </Link>
