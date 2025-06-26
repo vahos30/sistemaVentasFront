@@ -262,3 +262,32 @@ body {
 .nav-link:hover span {
   color: var(--accent-color);
 }
+
+/*Estilo para los botontes de Ver todos los Productos 
+y crear un nuevo producto*/
+
+.btn-gradient-productos {
+  background: linear-gradient(90deg, #1abc9c 0%, #3498db 100%);
+  color: #fff !important;
+  border: none;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.2s;
+}
+.btn-gradient-productos:hover {
+  background: linear-gradient(90deg, #3498db 0%, #1abc9c 100%);
+  color: #fff !important;
+  transform: translateY(-2px) scale(1.03);
+}
+
+.btn-outline-accent {
+  border: 2px solid #1abc9c;
+  color: #1abc9c !important;
+  background: #fff;
+  font-weight: 600;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+}
+.btn-outline-accent:hover {
+  background: #1abc9c;
+  color: #fff !important;
+  border-color: #1abc9c;
+}
