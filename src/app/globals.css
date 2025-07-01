@@ -291,3 +291,21 @@ y crear un nuevo producto*/
   color: #fff !important;
   border-color: #1abc9c;
 }
+/* Estilos para la tabla de ver todos los recibos */
+.tabla-detalle-recibo {
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.97rem;
+}
+.tabla-detalle-recibo th,
+.tabla-detalle-recibo td {
+  padding: 0.4rem 0.7rem;
+  text-align: center;
+}
+.tabla-detalle-recibo th {
+  background: #e9ecef;
+  font-weight: 600;
+}
