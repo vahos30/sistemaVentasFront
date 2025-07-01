@@ -58,8 +58,10 @@ export default function TodosRecibos() {
       const cliente = clientes.find((c) => c.id === recibo.clienteId);
       return (
         (cliente?.nombre && cliente.nombre.toLowerCase().includes(termino)) ||
-        (cliente?.NumeroDocumento &&
-          cliente.NumeroDocumento.toLowerCase().includes(termino))
+        (cliente?.apellido &&
+          cliente.apellido.toLowerCase().includes(termino)) ||
+        (cliente?.numeroDocumento &&
+          cliente.numeroDocumento.toLowerCase().includes(termino))
       );
     });
     setFiltrados(resultados);
@@ -80,6 +82,10 @@ export default function TodosRecibos() {
 
   function descargarPDF(recibo) {
     const doc = new jsPDF();
+    const cliente = clientes.find((c) => c.id === recibo.clienteId);
+    const documento = cliente
+      ? `${cliente.tipoDocumento || ""} ${cliente.numeroDocumento || ""}`
+      : "";
 
     doc.setFontSize(16);
     doc.text("Recibo de Pago", 14, 18);
@@ -87,14 +93,15 @@ export default function TodosRecibos() {
     doc.setFontSize(12);
     doc.text(`Número de Recibo: ${recibo.id.slice(-12)}`, 14, 30);
     doc.text(`Cliente: ${getNombreCliente(recibo.clienteId)}`, 14, 38);
-    doc.text(`Fecha: ${new Date(recibo.fecha).toLocaleString()}`, 14, 46);
-    doc.text(`Total: $${recibo.total.toLocaleString()}`, 14, 54);
+    doc.text(`Documento: ${documento}`, 14, 46);
+    doc.text(`Fecha: ${new Date(recibo.fecha).toLocaleString()}`, 14, 54);
+    doc.text(`Total: $${recibo.total.toLocaleString()}`, 14, 62);
 
     doc.setFontSize(13);
-    doc.text("Detalles:", 14, 66);
+    doc.text("Detalles:", 14, 74);
 
     // Tabla de detalles
-    let y = 74;
+    let y = 82;
     doc.setFontSize(11);
     doc.text("Cantidad", 14, y);
     doc.text("Producto", 40, y);
@@ -149,6 +156,7 @@ export default function TodosRecibos() {
               <tr>
                 <th># Recibo</th>
                 <th>Cliente</th>
+                <th>Documento</th>
                 <th>Fecha</th>
                 <th>Total</th>
                 <th>Detalles del Recibo</th>
@@ -156,55 +164,70 @@ export default function TodosRecibos() {
             </thead>
             <tbody>
               {filtrados.length > 0 ? (
-                filtrados.map((recibo) => (
-                  <tr key={recibo.id}>
-                    <td>{recibo.id.slice(-12)}</td>
-                    <td>{getNombreCliente(recibo.clienteId)}</td>
-                    <td>{new Date(recibo.fecha).toLocaleString()}</td>
-                    <td>${recibo.total.toLocaleString()}</td>
-                    <td>
-                      <div>
-                        <div
-                          className="fw-semibold mb-1 text-primary"
-                          style={{ fontSize: "0.98rem" }}
-                        >
-                          Detalles del recibo
-                        </div>
-                        <table className="table tabla-detalle-recibo mb-0">
-                          <thead>
-                            <tr>
-                              <th>Cantidad</th>
-                              <th>Producto</th>
-                              <th>Precio Unitario</th>
-                              <th>Subtotal</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {recibo.detalles.map((detalle) => (
-                              <tr key={detalle.id}>
-                                <td>{detalle.cantidad}</td>
-                                <td>{getNombreProducto(detalle.productoId)}</td>
-                                <td>
-                                  ${detalle.precioUnitario.toLocaleString()}
-                                </td>
-                                <td>${detalle.subtotal.toLocaleString()}</td>
+                filtrados.map((recibo) => {
+                  const cliente = clientes.find(
+                    (c) => c.id === recibo.clienteId
+                  );
+                  const documento = cliente
+                    ? `${cliente.tipoDocumento || ""} ${cliente.numeroDocumento || ""}`
+                    : "";
+                  return (
+                    <tr key={recibo.id}>
+                      <td>{recibo.id.slice(-12)}</td>
+                      <td>
+                        {cliente
+                          ? `${cliente.nombre} ${cliente.apellido || ""}`
+                          : "Desconocido"}
+                      </td>
+                      <td>{documento}</td>
+                      <td>{new Date(recibo.fecha).toLocaleString()}</td>
+                      <td>${recibo.total.toLocaleString()}</td>
+                      <td>
+                        <div>
+                          <div
+                            className="fw-semibold mb-1 text-primary"
+                            style={{ fontSize: "0.98rem" }}
+                          >
+                            Detalles del recibo
+                          </div>
+                          <table className="table tabla-detalle-recibo mb-0">
+                            <thead>
+                              <tr>
+                                <th>Cantidad</th>
+                                <th>Producto</th>
+                                <th>Precio Unitario</th>
+                                <th>Subtotal</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                        <button
-                          className="btn btn-outline-accent btn-sm mt-2"
-                          onClick={() => descargarPDF(recibo)}
-                        >
-                          Descargar PDF
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                            </thead>
+                            <tbody>
+                              {recibo.detalles.map((detalle) => (
+                                <tr key={detalle.id}>
+                                  <td>{detalle.cantidad}</td>
+                                  <td>
+                                    {getNombreProducto(detalle.productoId)}
+                                  </td>
+                                  <td>
+                                    ${detalle.precioUnitario.toLocaleString()}
+                                  </td>
+                                  <td>${detalle.subtotal.toLocaleString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          <button
+                            className="btn btn-outline-accent btn-sm mt-2"
+                            onClick={() => descargarPDF(recibo)}
+                          >
+                            Descargar PDF
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={5} className="text-center text-muted py-4">
+                  <td colSpan={6} className="text-center text-muted py-4">
                     {busqueda
                       ? `No se encontraron recibos para "${busqueda}"`
                       : "No hay recibos registrados"}
