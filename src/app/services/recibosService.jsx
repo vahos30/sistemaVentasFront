@@ -8,3 +8,15 @@ export async function obtenerRecibos() {
   }
   return await respuesta.json();
 }
+
+export async function crearRecibo(recibo) {
+  const respuesta = await fetch(BASE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(recibo),
+  });
+  if (!respuesta.ok) {
+    throw new Error("Error al crear el recibo");
+  }
+  return await respuesta.json();
+}

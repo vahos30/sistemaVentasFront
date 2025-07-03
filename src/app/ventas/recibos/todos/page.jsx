@@ -88,7 +88,7 @@ export default function TodosRecibos() {
       : "";
 
     doc.setFontSize(16);
-    doc.text("Recibo de Pago", 14, 18);
+    doc.text("Recibo de Compra", 14, 18);
 
     doc.setFontSize(12);
     doc.text(`Número de Recibo: ${recibo.id.slice(-12)}`, 14, 30);
@@ -169,7 +169,9 @@ export default function TodosRecibos() {
                     (c) => c.id === recibo.clienteId
                   );
                   const documento = cliente
-                    ? `${cliente.tipoDocumento || ""} ${cliente.numeroDocumento || ""}`
+                    ? `${cliente.tipoDocumento || ""} ${
+                        cliente.numeroDocumento || ""
+                      }`
                     : "";
                   return (
                     <tr key={recibo.id}>
