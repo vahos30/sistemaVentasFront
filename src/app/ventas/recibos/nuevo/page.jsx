@@ -91,6 +91,7 @@ export default function CrearReciboPage() {
         ...productoSeleccionado,
         cantidad,
         subtotal: cantidad * productoSeleccionado.precio,
+        descripcion: productoSeleccionado.descripcion, // <-- Agrega esto
       },
     ]);
     setProductoSeleccionado(null);
@@ -137,51 +138,104 @@ export default function CrearReciboPage() {
     }
   };
 
-  const descargarPDF = (recibo) => {
+  function descargarPDF(recibo) {
     const doc = new jsPDF();
     const numeroRecibo = recibo.id ? recibo.id.slice(-12) : "";
-    doc.setFontSize(16);
+
+    // Título principal
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
     doc.text("Recibo de Compra", 14, 18);
 
+    // Datos del recibo
     doc.setFontSize(12);
-    doc.text(`Número de Recibo: ${numeroRecibo}`, 14, 26);
+    doc.setFont("helvetica", "bold");
+    doc.text("Número de Recibo:", 14, 28);
+    doc.setFont("helvetica", "normal");
+    doc.text(numeroRecibo, 60, 28);
 
+    doc.setFont("helvetica", "bold");
+    doc.text("Cliente:", 14, 36);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${recibo.cliente.nombre} ${recibo.cliente.apellido}`, 60, 36);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Documento:", 14, 44);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      `${recibo.cliente.tipoDocumento} ${recibo.cliente.numeroDocumento}`,
+      60,
+      44
+    );
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Fecha:", 14, 52);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${new Date(recibo.fecha).toLocaleString()}`, 60, 52);
+
+    // Título productos
+    let y = 68;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Productos", 14, y);
+
+    y += 8;
     doc.setFontSize(12);
-    doc.text(
-      `Cliente: ${recibo.cliente.nombre} ${recibo.cliente.apellido}`,
-      14,
-      38
-    );
-    doc.text(
-      `Documento: ${recibo.cliente.tipoDocumento} ${recibo.cliente.numeroDocumento}`,
-      14,
-      46
-    );
-    doc.text(`Fecha: ${new Date(recibo.fecha).toLocaleString()}`, 14, 54);
 
-    doc.setFontSize(13);
-    doc.text("Detalles:", 14, 66);
+    recibo.detalles.forEach((d, idx) => {
+      doc.setFont("helvetica", "bold");
+      doc.text("Producto:", 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(d.nombre, 50, y);
 
-    let y = 74;
-    doc.setFontSize(11);
-    doc.text("Producto", 14, y);
-    doc.text("Referencia", 60, y);
-    doc.text("Precio Unit.", 100, y);
-    doc.text("Cantidad", 140, y);
-    doc.text("Subtotal", 170, y);
-
-    y += 7;
-    recibo.detalles.forEach((d) => {
-      doc.text(d.nombre, 14, y);
-      doc.text(d.referencia, 60, y);
-      doc.text(`$${d.precioUnitario.toLocaleString()}`, 100, y);
-      doc.text(String(d.cantidad), 140, y);
-      doc.text(`$${(d.precioUnitario * d.cantidad).toLocaleString()}`, 170, y);
       y += 7;
+      doc.setFont("helvetica", "bold");
+      doc.text("Referencia:", 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(d.referencia, 50, y);
+
+      y += 7;
+      doc.setFont("helvetica", "bold");
+      doc.text("Descripción:", 14, y);
+      doc.setFont("helvetica", "normal");
+      const descLines = doc.splitTextToSize(d.descripcion || "", 140);
+      doc.text(descLines, 50, y);
+      y += descLines.length * 6;
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Precio Unitario:", 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(`$${d.precioUnitario.toLocaleString()}`, 50, y);
+
+      y += 7;
+      doc.setFont("helvetica", "bold");
+      doc.text("Cantidad:", 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(String(d.cantidad), 50, y);
+
+      y += 7;
+      doc.setFont("helvetica", "bold");
+      doc.text("Subtotal:", 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(`$${(d.precioUnitario * d.cantidad).toLocaleString()}`, 50, y);
+
+      y += 10;
+      // Línea separadora entre productos
+      if (idx < recibo.detalles.length - 1) {
+        doc.setDrawColor(200);
+        doc.line(14, y, 196, y);
+        y += 5;
+      }
+
+      // Salto de página si es necesario
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
     });
 
-    doc.save(`recibo_${recibo.id ? recibo.id.slice(-12) : Date.now()}.pdf`);
-  };
+    doc.save(`recibo_${numeroRecibo || Date.now()}.pdf`);
+  }
 
   return (
     <div className="container py-5">
@@ -331,6 +385,7 @@ export default function CrearReciboPage() {
                           <th>Referencia</th>
                           <th>Precio</th>
                           <th>Cantidad</th>
+                          <th>Descripción</th> {/* Nueva columna */}
                           <th>Subtotal</th>
                           <th></th>
                         </tr>
@@ -342,6 +397,7 @@ export default function CrearReciboPage() {
                             <td>{p.referencia}</td>
                             <td>${p.precio.toLocaleString()}</td>
                             <td>{p.cantidad}</td>
+                            <td>{p.descripcion}</td> {/* Nueva celda */}
                             <td>${p.subtotal.toLocaleString()}</td>
                             <td>
                               <button
@@ -404,6 +460,7 @@ export default function CrearReciboPage() {
                         <tr>
                           <th>Producto</th>
                           <th>Referencia</th>
+                          <th>Descripción</th> {/* Nueva columna */}
                           <th>Precio Unitario</th>
                           <th>Cantidad</th>
                           <th>Subtotal</th>
@@ -414,6 +471,7 @@ export default function CrearReciboPage() {
                           <tr key={d.productoId}>
                             <td>{d.nombre}</td>
                             <td>{d.referencia}</td>
+                            <td>{d.descripcion}</td> {/* Nueva celda */}
                             <td>${d.precioUnitario.toLocaleString()}</td>
                             <td>{d.cantidad}</td>
                             <td>
