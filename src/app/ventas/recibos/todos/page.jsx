@@ -1,12 +1,50 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { obtenerRecibos } from "@/app/services/recibosService";
+import { obtenerRecibos, eliminarRecibo } from "@/app/services/recibosService";
 import { obtenerClientes } from "@/app/services/clienteServices";
 import { obtenerProductos } from "@/app/services/productosService";
 import BotonVolver from "@/app/components/BotonVolver";
 import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import jsPDF from "jspdf";
+
+// Cambiado: La confirmación recibe una función callback para ejecutar la acción de anulación
+const mostrarToastConfirmacion = (onConfirm) => {
+  toast.info(
+    ({ closeToast }) => (
+      <div>
+        <div className="fw-semibold mb-2">
+          ¿Está seguro de eliminar el Recibo de compra?
+        </div>
+        <div className="mb-2 text-danger small">
+          Esta acción no se podrá deshacer.
+        </div>
+        <div className="d-flex gap-2 justify-content-end">
+          <button className="btn btn-sm btn-secondary" onClick={closeToast}>
+            No
+          </button>
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={async () => {
+              await onConfirm();
+              closeToast();
+            }}
+          >
+            Sí, eliminar
+          </button>
+        </div>
+      </div>
+    ),
+    {
+      autoClose: false,
+      closeOnClick: false,
+      draggable: false,
+      position: "top-center",
+      style: { minWidth: 320 },
+    }
+  );
+};
 
 export default function TodosRecibos() {
   const [recibos, setRecibos] = useState([]);
@@ -223,6 +261,18 @@ export default function TodosRecibos() {
     doc.save(`recibo_${numeroRecibo || Date.now()}.pdf`);
   }
 
+  // Nueva función para eliminar recibo, accede a los estados
+  const handleEliminarRecibo = async (id) => {
+    try {
+      await eliminarRecibo(id);
+      setRecibos((prev) => prev.filter((r) => r.id !== id));
+      setFiltrados((prev) => prev.filter((r) => r.id !== id));
+      toast.success("Recibo eliminado correctamente");
+    } catch {
+      toast.error("Error al eliminar el recibo");
+    }
+  };
+
   return (
     <div className="container py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -332,12 +382,24 @@ export default function TodosRecibos() {
                               </tbody>
                             </table>
                           </div>
-                          <button
-                            className="btn btn-outline-accent btn-sm mt-2"
-                            onClick={() => descargarPDF(recibo)}
-                          >
-                            Descargar PDF
-                          </button>
+                          <div>
+                            <button
+                              className="btn btn-outline-accent btn-sm mt-2"
+                              onClick={() => descargarPDF(recibo)}
+                            >
+                              Descargar PDF
+                            </button>
+                            <button
+                              className="btn btn-danger btn-sm mt-2 ms-2"
+                              onClick={() =>
+                                mostrarToastConfirmacion(() =>
+                                  handleEliminarRecibo(recibo.id)
+                                )
+                              }
+                            >
+                              Anular recibo
+                            </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
