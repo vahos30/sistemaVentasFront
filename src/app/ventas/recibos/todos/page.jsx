@@ -80,6 +80,22 @@ export default function TodosRecibos() {
     return producto ? producto.nombre : "Desconocido";
   };
 
+  // Calcula el subtotal con descuento
+  const calcularSubtotal = (
+    precio,
+    cantidad,
+    descuentoTipo,
+    descuentoValor
+  ) => {
+    let subtotal = precio * cantidad;
+    if (descuentoTipo === "porcentaje") {
+      subtotal = subtotal - (subtotal * (descuentoValor || 0)) / 100;
+    } else if (descuentoTipo === "valor") {
+      subtotal = subtotal - (descuentoValor || 0);
+    }
+    return subtotal > 0 ? subtotal : 0;
+  };
+
   function descargarPDF(recibo) {
     const doc = new jsPDF();
     const cliente = clientes.find((c) => c.id === recibo.clienteId);
@@ -140,14 +156,13 @@ export default function TodosRecibos() {
       doc.setFont("helvetica", "bold");
       doc.text("Referencia:", 14, y);
       doc.setFont("helvetica", "normal");
-      doc.text(d.referencia || "", 50, y);
+      const producto = productos.find((p) => p.id === d.productoId);
+      doc.text(producto?.referencia || "", 50, y);
 
       y += 7;
       doc.setFont("helvetica", "bold");
       doc.text("Descripción:", 14, y);
       doc.setFont("helvetica", "normal");
-      // Busca la descripción del producto si no viene en el detalle
-      const producto = productos.find((p) => p.id === d.productoId);
       const descripcion = d.descripcion || producto?.descripcion || "";
       const descLines = doc.splitTextToSize(descripcion, 140);
       doc.text(descLines, 50, y);
@@ -166,9 +181,29 @@ export default function TodosRecibos() {
 
       y += 7;
       doc.setFont("helvetica", "bold");
+      doc.text("Descuento:", 14, y);
+      doc.setFont("helvetica", "normal");
+      let descuentoTexto =
+        d.tipoDescuento === "ValorAbsoluto"
+          ? `$${d.valorDescuento?.toLocaleString() || 0}`
+          : `${d.valorDescuento || 0}%`;
+      doc.text(descuentoTexto, 50, y);
+
+      y += 7;
+      doc.setFont("helvetica", "bold");
       doc.text("Subtotal:", 14, y);
       doc.setFont("helvetica", "normal");
-      doc.text(`$${(d.precioUnitario * d.cantidad).toLocaleString()}`, 50, y);
+      // Calcula el subtotal con descuento si no viene
+      let subtotal = d.subtotal;
+      if (subtotal === undefined) {
+        subtotal = calcularSubtotal(
+          d.precioUnitario,
+          d.cantidad,
+          d.descuentoTipo,
+          d.descuentoValor
+        );
+      }
+      doc.text(`$${subtotal.toLocaleString()}`, 50, y);
 
       y += 10;
       // Línea separadora entre productos
@@ -260,30 +295,43 @@ export default function TodosRecibos() {
                           >
                             Detalles del recibo
                           </div>
-                          <table className="table tabla-detalle-recibo mb-0">
-                            <thead>
-                              <tr>
-                                <th>Cantidad</th>
-                                <th>Producto</th>
-                                <th>Precio Unitario</th>
-                                <th>Subtotal</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {recibo.detalles.map((detalle) => (
-                                <tr key={detalle.id}>
-                                  <td>{detalle.cantidad}</td>
-                                  <td>
-                                    {getNombreProducto(detalle.productoId)}
-                                  </td>
-                                  <td>
-                                    ${detalle.precioUnitario.toLocaleString()}
-                                  </td>
-                                  <td>${detalle.subtotal.toLocaleString()}</td>
+                          <div className="table-responsive">
+                            <table className="table tabla-detalle-recibo mb-0">
+                              <thead>
+                                <tr>
+                                  <th>Cantidad</th>
+                                  <th>Producto</th>
+                                  <th>Precio Unitario</th>
+                                  <th>Descuento</th>
+                                  <th>Subtotal</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {recibo.detalles.map((detalle) => (
+                                  <tr key={detalle.id || detalle.productoId}>
+                                    <td>{detalle.cantidad}</td>
+                                    <td>
+                                      {getNombreProducto(detalle.productoId)}
+                                    </td>
+                                    <td>
+                                      ${detalle.precioUnitario.toLocaleString()}
+                                    </td>
+                                    <td>
+                                      {detalle.tipoDescuento === "ValorAbsoluto"
+                                        ? `$${
+                                            detalle.valorDescuento?.toLocaleString() ||
+                                            0
+                                          }`
+                                        : `${detalle.valorDescuento || 0}%`}
+                                    </td>
+                                    <td>
+                                      ${detalle.subtotal.toLocaleString()}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                           <button
                             className="btn btn-outline-accent btn-sm mt-2"
                             onClick={() => descargarPDF(recibo)}
