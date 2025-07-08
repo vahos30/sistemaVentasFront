@@ -20,3 +20,13 @@ export async function crearRecibo(recibo) {
   }
   return await respuesta.json();
 }
+
+export async function eliminarRecibo(id) {
+  const respuesta = await fetch(`${BASE_URL}/${id}`, {
+    method: "DELETE",
+  });
+  if (!respuesta.ok) {
+    throw new Error("Error al eliminar el recibo");
+  }
+  return true;
+}

@@ -98,7 +98,7 @@ export default function MenuLayout({ children }) {
             <li className="nav-item">
               <Link
                 className="nav-link d-flex align-items-center"
-                href="reportes"
+                href="/reportes"
               >
                 <i className="bi bi-graph-up me-3 fs-5"></i>
                 <span>Reportes</span>
