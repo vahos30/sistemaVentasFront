@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { obtenerInventario } from "@/app/services/reportesService";
 import { toast } from "react-toastify";
 import BotonVolver from "@/app/components/BotonVolver";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function ReporteInventario() {
   const [productos, setProductos] = useState([]);
@@ -13,7 +15,7 @@ export default function ReporteInventario() {
     const cargar = async () => {
       try {
         const data = await obtenerInventario();
-        setProductos(data.filter((p) => p.activo));
+        setProductos(data); // <-- Mostrar todos los productos
       } catch {
         toast.error("Error al cargar el inventario");
       } finally {
@@ -22,6 +24,40 @@ export default function ReporteInventario() {
     };
     cargar();
   }, []);
+
+  const handleDescargarPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Reporte de Inventario", 14, 20);
+
+    // Prepara los datos para la tabla
+    const rows = productos.map((p) => [
+      p.nombre,
+      p.referencia || "-",
+      `$${p.precio}`,
+      p.cantidadStock,
+      p.activo ? "Disponible" : "No disponible",
+    ]);
+
+    autoTable(doc, {
+      startY: 30,
+      head: [["Producto", "Referencia", "Precio", "Stock", "Estado"]],
+      body: rows,
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 50 }, // Producto
+        1: { cellWidth: 35 }, // Referencia
+        2: { cellWidth: 25 }, // Precio
+        3: { cellWidth: 20 }, // Stock
+        4: { cellWidth: 30 }, // Estado
+      },
+      // Si quieres que el ancho se ajuste automáticamente, puedes omitir columnStyles
+      // y solo usar styles: { fontSize: 10 }
+      // autoTable ajusta el texto y hace salto de línea si es necesario
+    });
+
+    doc.save("inventario.pdf");
+  };
 
   return (
     <div className="container py-5">
@@ -69,9 +105,13 @@ export default function ReporteInventario() {
                         <td>${p.precio.toLocaleString()}</td>
                         <td>
                           <span
-                            className={`badge bg-${
-                              p.cantidadStock > 2 ? "success" : "warning"
-                            } text-dark`}
+                            className={`badge ${
+                              p.cantidadStock === 0
+                                ? "bg-danger"
+                                : p.cantidadStock <= 5
+                                ? "bg-warning text-dark"
+                                : "bg-success"
+                            }`}
                           >
                             {p.cantidadStock}
                           </span>
@@ -93,6 +133,14 @@ export default function ReporteInventario() {
             </div>
           )}
           <div className="text-end mt-4">
+            <button
+              className="btn btn-outline-success me-3"
+              onClick={handleDescargarPDF}
+              disabled={productos.length === 0}
+            >
+              <i className="bi bi-file-earmark-pdf me-2"></i>
+              Descargar Inventario en PDF
+            </button>
             <BotonVolver
               texto="← Volver al módulo de Reportes"
               to="/reportes"

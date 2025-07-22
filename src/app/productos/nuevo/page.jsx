@@ -75,11 +75,12 @@ export default function CrearProductoPage() {
     if (!validarCampos()) return;
 
     try {
+      const cantidad = parseInt(formData.cantidadStock, 10);
       const producto = {
         ...formData,
         precio: parseFloat(formData.precio),
-        cantidadStock: parseInt(formData.cantidadStock, 10),
-        activo: formData.disponible,
+        cantidadStock: cantidad,
+        activo: cantidad > 0, // <-- Aquí se asigna automáticamente
       };
       await crearProducto(producto);
       toast.success("✅ Producto creado exitosamente");
