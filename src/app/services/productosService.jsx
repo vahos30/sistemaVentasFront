@@ -1,4 +1,7 @@
-const BASE_URL = "https://localhost:7062/api/Productos";
+const BASE_URL =
+  "https://sistemainventarioapi20250719110533-dsb7hkfuf3bvhwf7.centralus-01.azurewebsites.net/api/Productos";
+
+//const BASE_URL = "https://localhost:7062/api/Productos";
 
 // Obtener todos los productos
 export async function obtenerProductos() {
