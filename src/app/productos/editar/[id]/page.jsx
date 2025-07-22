@@ -35,6 +35,16 @@ export default function EditarProducto({ params }) {
     cargarProducto();
   }, [id]);
 
+  useEffect(() => {
+    if (producto) {
+      const cantidad = parseInt(producto.cantidadStock, 10);
+      setProducto((prev) => ({
+        ...prev,
+        activo: cantidad > 0,
+      }));
+    }
+  }, [producto?.cantidadStock]);
+
   // Validación simple
   const validar = () => {
     const nuevosErrores = {};
@@ -206,17 +216,13 @@ export default function EditarProducto({ params }) {
         </div>
         <div className="mb-3">
           <label className="form-label">Producto Disponible:</label>
-          <select
-            className="form-select"
-            name="activo"
-            value={producto.activo ? "true" : "false"}
-            onChange={(e) =>
-              setProducto({ ...producto, activo: e.target.value === "true" })
-            }
-          >
-            <option value="true">Sí</option>
-            <option value="false">No</option>
-          </select>
+          <div>
+            {producto.activo ? (
+              <span className="badge bg-success">Sí, disponible</span>
+            ) : (
+              <span className="badge bg-danger">No disponible</span>
+            )}
+          </div>
         </div>
         <div className="d-flex justify-content-center">
           <button type="submit" className="btn btn-primary" disabled={enviando}>
