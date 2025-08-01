@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { obtenerClientes } from "@/app/services/clienteServices";
-import { obtenerProductos } from "@/app/services/productosService";
+import {
+  obtenerProductos,
+  actualizarProducto,
+} from "@/app/services/productosService";
 import { crearRecibo } from "@/app/services/recibosService";
 import BotonBuscar from "@/app/components/BotonBuscar";
 import BotonAgregar from "@/app/components/BotonAgregar";
@@ -27,6 +30,7 @@ export default function CrearReciboPage() {
   const [productosRecibo, setProductosRecibo] = useState([]);
   const [reciboCreado, setReciboCreado] = useState(null);
   const [creando, setCreando] = useState(false);
+  const [aplicaIva, setAplicaIva] = useState("no");
 
   // Cargar productos disponibles
   useEffect(() => {
@@ -169,22 +173,46 @@ export default function CrearReciboPage() {
     }
     setCreando(true);
     try {
-      const recibo = {
-        clienteId: cliente.id,
-        fecha: new Date().toISOString(),
-        detalles: productosRecibo.map((p) => ({
+      // Calcular detalles y el IVA solo si aplica
+      const detalles = productosRecibo.map((p) => {
+        const subtotal = calcularSubtotal(
+          p.precio,
+          p.cantidad,
+          p.descuentoTipo,
+          p.descuentoValor
+        );
+        return {
           cantidad: p.cantidad,
           precioUnitario: p.precio,
           productoId: p.id,
           tipoDescuento:
             p.descuentoTipo === "porcentaje" ? "Porcentaje" : "ValorAbsoluto",
           valorDescuento: p.descuentoValor,
-        })),
+          subtotal,
+          valorIva: aplicaIva === "si" ? (subtotal * 0.19) / 1.19 : 0, // <-- solo si aplica IVA
+        };
+      });
+
+      // Calcular el IVA total solo si aplica
+      const valorIvaTotal =
+        aplicaIva === "si"
+          ? detalles.reduce((acc, d) => acc + d.valorIva, 0)
+          : 0;
+
+      // Crear el objeto recibo
+      const recibo = {
+        clienteId: cliente.id,
+        fecha: new Date().toISOString(),
+        detalles,
+        valorIva: valorIvaTotal, // <-- solo si aplica IVA
+        aplicaIva: aplicaIva === "si", // <-- para saber si aplica IVA
       };
+
       const data = await crearRecibo(recibo);
       setReciboCreado({
         ...data,
         cliente,
+        aplicaIva: aplicaIva === "si",
         detalles: data.detalles.map((d) => {
           const prod = productosRecibo.find((p) => p.id === d.productoId);
           return {
@@ -202,6 +230,19 @@ export default function CrearReciboPage() {
         }),
       });
       toast.success("Recibo creado exitosamente");
+
+      // Después de crear el recibo, actualiza productos con stock 0
+      for (const p of productosRecibo) {
+        const productoActual = productos.find((prod) => prod.id === p.id);
+        const nuevoStock = productoActual.cantidadStock - p.cantidad;
+        if (nuevoStock <= 0) {
+          await actualizarProducto(p.id, {
+            ...productoActual,
+            cantidadStock: 0,
+            activo: false,
+          });
+        }
+      }
     } catch (error) {
       toast.error("Error al crear el recibo");
     } finally {
@@ -314,6 +355,58 @@ export default function CrearReciboPage() {
         y = 20;
       }
     });
+
+    // Cálculo de totales
+    let subtotalSinIVA = 0;
+    let ivaValor = 0;
+    let total = 0;
+    if (recibo.aplicaIva) {
+      subtotalSinIVA = recibo.detalles.reduce(
+        (acc, d) => acc + d.subtotal / 1.19,
+        0
+      );
+      ivaValor = recibo.detalles.reduce(
+        (acc, d) => acc + (d.subtotal * 0.19) / 1.19,
+        0
+      );
+      total = recibo.detalles.reduce((acc, d) => acc + d.subtotal, 0);
+    } else {
+      total = recibo.detalles.reduce((acc, d) => acc + d.subtotal, 0);
+    }
+
+    // Mostrar totales en PDF
+    let yTotales = y + 10;
+    doc.setFontSize(12);
+    if (recibo.aplicaIva) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Subtotal sin IVA:", 120, yTotales);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        `$${subtotalSinIVA.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+        })}`,
+        170,
+        yTotales
+      );
+
+      yTotales += 7;
+      doc.setFont("helvetica", "bold");
+      doc.text("IVA (19%):", 120, yTotales);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        `$${ivaValor.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+        })}`,
+        170,
+        yTotales
+      );
+
+      yTotales += 7;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.text("Total:", 120, yTotales);
+    doc.setFont("helvetica", "normal");
+    doc.text(`$${total.toLocaleString()}`, 170, yTotales);
 
     doc.save(`recibo_${numeroRecibo || Date.now()}.pdf`);
   }
@@ -432,6 +525,23 @@ export default function CrearReciboPage() {
                         </strong>
                       </div>
                       <div>Descripción: {productoSeleccionado.descripcion}</div>
+
+                      {/* Select de IVA aquí */}
+                      <div className="mt-3 mb-2">
+                        <label className="form-label fw-semibold">
+                          ¿Aplicar IVA (19%)?
+                        </label>
+                        <select
+                          className="form-select"
+                          value={aplicaIva}
+                          onChange={(e) => setAplicaIva(e.target.value)}
+                          style={{ maxWidth: 200 }}
+                        >
+                          <option value="no">No</option>
+                          <option value="si">Sí</option>
+                        </select>
+                      </div>
+
                       <div className="mt-2 d-flex flex-wrap align-items-center gap-2">
                         <label className="me-2 mb-0">Cantidad:</label>
                         <input
@@ -483,88 +593,104 @@ export default function CrearReciboPage() {
 
                 {/* Tabla de productos agregados */}
                 {productosRecibo.length > 0 && (
-                  <div className="mt-4 table-responsive">
+                  <div className="mt-4">
                     <h5 className="mb-3 text-success">
                       Productos en el recibo
                     </h5>
-                    <table className="table table-bordered table-hover align-middle">
-                      <thead className="table-light">
-                        <tr>
-                          <th>Nombre</th>
-                          <th>Referencia</th>
-                          <th>Precio</th>
-                          <th>Cantidad</th>
-                          <th>Descripción</th>
-                          <th>Descuento</th>
-                          <th>Subtotal</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {productosRecibo.map((p, idx) => (
-                          <tr key={p.id}>
-                            <td>{p.nombre}</td>
-                            <td>{p.referencia}</td>
-                            <td>${p.precio.toLocaleString()}</td>
-                            <td>{p.cantidad}</td>
-                            <td>{p.descripcion}</td>
-                            <td>
-                              <div className="d-flex flex-column gap-1">
-                                <select
-                                  className="form-select form-select-sm"
-                                  style={{ width: 130, minWidth: 110 }}
-                                  value={p.descuentoTipo}
-                                  onChange={(e) =>
-                                    handleEditarDescuento(
-                                      idx,
-                                      e.target.value,
-                                      p.descuentoValor
-                                    )
-                                  }
-                                >
-                                  <option value="porcentaje">
-                                    Porcentaje (%)
-                                  </option>
-                                  <option value="valor">Valor ($)</option>
-                                </select>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={
-                                    p.descuentoTipo === "porcentaje"
-                                      ? 100
-                                      : p.precio * p.cantidad
-                                  }
-                                  value={p.descuentoValor}
-                                  onChange={(e) =>
-                                    handleEditarDescuento(
-                                      idx,
-                                      p.descuentoTipo,
-                                      Number(e.target.value)
-                                    )
-                                  }
-                                  className="form-control form-control-sm"
-                                  style={{ width: 100, minWidth: 80 }}
-                                  placeholder={
-                                    p.descuentoTipo === "porcentaje" ? "%" : "$"
-                                  }
-                                />
-                              </div>
-                            </td>
-                            <td>${p.subtotal.toLocaleString()}</td>
-                            <td>
-                              <button
-                                type="button"
-                                className="btn btn-danger btn-sm"
-                                onClick={() => handleEliminarProducto(p.id)}
-                              >
-                                Quitar
-                              </button>
-                            </td>
+                    <div style={{ maxWidth: "100%", overflowX: "auto" }}>
+                      <table
+                        className="table tabla-detalle-recibo mb-0"
+                        style={{ minWidth: 1000 }}
+                      >
+                        <thead>
+                          <tr>
+                            <th>Cantidad</th>
+                            <th>Producto</th>
+                            <th style={{ width: 300, minWidth: 200 }}>
+                              Descripción
+                            </th>
+                            <th>Precio Unitario</th>
+                            <th>Descuento</th>
+                            <th>Subtotal</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {productosRecibo.map((p, idx) => (
+                            <tr key={p.id}>
+                              <td>{p.cantidad}</td>
+                              <td>{p.nombre}</td>
+                              <td
+                                style={{
+                                  whiteSpace: "pre-line",
+                                  wordBreak: "break-word",
+                                  maxWidth: 300,
+                                  minWidth: 200,
+                                  verticalAlign: "top",
+                                }}
+                              >
+                                {p.descripcion}
+                              </td>
+                              <td>${p.precio.toLocaleString()}</td>
+                              <td>
+                                <div className="d-flex flex-column gap-1">
+                                  <select
+                                    className="form-select form-select-sm"
+                                    style={{ width: 130, minWidth: 110 }}
+                                    value={p.descuentoTipo}
+                                    onChange={(e) =>
+                                      handleEditarDescuento(
+                                        idx,
+                                        e.target.value,
+                                        p.descuentoValor
+                                      )
+                                    }
+                                  >
+                                    <option value="porcentaje">
+                                      Porcentaje (%)
+                                    </option>
+                                    <option value="valor">Valor ($)</option>
+                                  </select>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={
+                                      p.descuentoTipo === "porcentaje"
+                                        ? 100
+                                        : p.precio * p.cantidad
+                                    }
+                                    value={p.descuentoValor}
+                                    onChange={(e) =>
+                                      handleEditarDescuento(
+                                        idx,
+                                        p.descuentoTipo,
+                                        Number(e.target.value)
+                                      )
+                                    }
+                                    className="form-control form-control-sm"
+                                    style={{ width: 100, minWidth: 80 }}
+                                    placeholder={
+                                      p.descuentoTipo === "porcentaje"
+                                        ? "%"
+                                        : "$"
+                                    }
+                                  />
+                                </div>
+                              </td>
+                              <td>${p.subtotal.toLocaleString()}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="btn btn-danger btn-sm"
+                                  onClick={() => handleEliminarProducto(p.id)}
+                                >
+                                  Quitar
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
 
@@ -649,6 +775,34 @@ export default function CrearReciboPage() {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resumen del recibo creado */}
+          {reciboCreado && (
+            <div className="text-end mt-3">
+              {aplicaIva === "si" && (
+                <>
+                  <div>
+                    <strong>Subtotal sin IVA:</strong> $
+                    {reciboCreado.detalles
+                      .reduce((acc, d) => acc + d.subtotal / 1.19, 0)
+                      .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </div>
+                  <div>
+                    <strong>IVA (19%):</strong> $
+                    {reciboCreado.detalles
+                      .reduce((acc, d) => acc + (d.subtotal * 0.19) / 1.19, 0)
+                      .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </div>
+                </>
+              )}
+              <div>
+                <strong>Total:</strong> $
+                {reciboCreado.detalles
+                  .reduce((acc, d) => acc + d.subtotal, 0)
+                  .toLocaleString()}
               </div>
             </div>
           )}

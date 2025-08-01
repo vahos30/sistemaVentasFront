@@ -9,7 +9,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import jsPDF from "jspdf";
 
-// Cambiado: La confirmación recibe una función callback para ejecutar la acción de anulación
+// Confirmación de borrado con callback
 const mostrarToastConfirmacion = (onConfirm) => {
   toast.info(
     ({ closeToast }) => (
@@ -85,51 +85,41 @@ export default function TodosRecibos() {
     cargarDatos();
   }, []);
 
-  // Buscar por nombre de cliente o cédula
+  // Filtrar recibos por nombre/apellido/documento
   useEffect(() => {
     if (!busqueda.trim()) {
       setFiltrados(recibos);
       return;
     }
     const termino = busqueda.toLowerCase();
-    const resultados = recibos.filter((recibo) => {
-      const cliente = clientes.find((c) => c.id === recibo.clienteId);
-      return (
-        (cliente?.nombre && cliente.nombre.toLowerCase().includes(termino)) ||
-        (cliente?.apellido &&
-          cliente.apellido.toLowerCase().includes(termino)) ||
-        (cliente?.numeroDocumento &&
-          cliente.numeroDocumento.toLowerCase().includes(termino))
-      );
-    });
-    setFiltrados(resultados);
+    setFiltrados(
+      recibos.filter((recibo) => {
+        const cliente = clientes.find((c) => c.id === recibo.clienteId);
+        return (
+          cliente?.nombre.toLowerCase().includes(termino) ||
+          cliente?.apellido?.toLowerCase().includes(termino) ||
+          cliente?.numeroDocumento?.toLowerCase().includes(termino)
+        );
+      })
+    );
   }, [busqueda, recibos, clientes]);
 
-  // Helpers para mostrar nombres
   const getNombreCliente = (clienteId) => {
-    const cliente = clientes.find((c) => c.id === clienteId);
-    return cliente
-      ? `${cliente.nombre} ${cliente.apellido || ""}`
-      : "Desconocido";
+    const c = clientes.find((c) => c.id === clienteId);
+    return c ? `${c.nombre} ${c.apellido || ""}` : "Desconocido";
   };
 
   const getNombreProducto = (productoId) => {
-    const producto = productos.find((p) => p.id === productoId);
-    return producto ? producto.nombre : "Desconocido";
+    const p = productos.find((p) => p.id === productoId);
+    return p ? p.nombre : "Desconocido";
   };
 
-  // Calcula el subtotal con descuento
-  const calcularSubtotal = (
-    precio,
-    cantidad,
-    descuentoTipo,
-    descuentoValor
-  ) => {
+  const calcularSubtotal = (precio, cantidad, tipo, valor) => {
     let subtotal = precio * cantidad;
-    if (descuentoTipo === "porcentaje") {
-      subtotal = subtotal - (subtotal * (descuentoValor || 0)) / 100;
-    } else if (descuentoTipo === "valor") {
-      subtotal = subtotal - (descuentoValor || 0);
+    if (tipo === "porcentaje") {
+      subtotal -= (subtotal * (valor || 0)) / 100;
+    } else if (tipo === "valor") {
+      subtotal -= valor || 0;
     }
     return subtotal > 0 ? subtotal : 0;
   };
@@ -140,133 +130,148 @@ export default function TodosRecibos() {
     const documento = cliente
       ? `${cliente.tipoDocumento || ""} ${cliente.numeroDocumento || ""}`
       : "";
-    const numeroRecibo = recibo.id ? recibo.id.slice(-12) : "";
+    const numeroRecibo = recibo.id.slice(-12);
 
-    // Título principal
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
+    // Título y datos básicos
+    doc.setFontSize(18).setFont("helvetica", "bold");
     doc.text("Recibo de Compra", 14, 18);
-
-    // Datos del recibo
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12).setFont("helvetica", "bold");
     doc.text("Número de Recibo:", 14, 28);
-    doc.setFont("helvetica", "normal");
-    doc.text(numeroRecibo, 60, 28);
+    doc.setFont("helvetica", "normal").text(numeroRecibo, 60, 28);
+    doc.setFont("helvetica", "bold").text("Cliente:", 14, 36);
+    doc
+      .setFont("helvetica", "normal")
+      .text(getNombreCliente(recibo.clienteId), 60, 36);
+    doc.setFont("helvetica", "bold").text("Documento:", 14, 44);
+    doc.setFont("helvetica", "normal").text(documento, 60, 44);
+    doc.setFont("helvetica", "bold").text("Fecha:", 14, 52);
+    doc
+      .setFont("helvetica", "normal")
+      .text(new Date(recibo.fecha).toLocaleString(), 60, 52);
+    doc.setFont("helvetica", "bold").text("Total:", 14, 60);
+    doc
+      .setFont("helvetica", "normal")
+      .text(`$${recibo.total.toLocaleString()}`, 60, 60);
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Cliente:", 14, 36);
-    doc.setFont("helvetica", "normal");
-    doc.text(getNombreCliente(recibo.clienteId), 60, 36);
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Documento:", 14, 44);
-    doc.setFont("helvetica", "normal");
-    doc.text(documento, 60, 44);
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Fecha:", 14, 52);
-    doc.setFont("helvetica", "normal");
-    doc.text(`${new Date(recibo.fecha).toLocaleString()}`, 60, 52);
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Total:", 14, 60);
-    doc.setFont("helvetica", "normal");
-    doc.text(`$${recibo.total.toLocaleString()}`, 60, 60);
-
-    // Título productos
+    // Productos
     let y = 75;
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("Productos", 14, y);
-
+    doc.setFontSize(14).setFont("helvetica", "bold").text("Productos", 14, y);
     y += 8;
     doc.setFontSize(12);
-
     recibo.detalles.forEach((d, idx) => {
-      // Producto
-      doc.setFont("helvetica", "bold");
-      doc.text("Producto:", 14, y);
-      doc.setFont("helvetica", "normal");
-      doc.text(getNombreProducto(d.productoId), 50, y);
-
+      doc.setFont("helvetica", "bold").text("Producto:", 14, y);
+      doc
+        .setFont("helvetica", "normal")
+        .text(getNombreProducto(d.productoId), 50, y);
       y += 7;
-      doc.setFont("helvetica", "bold");
-      doc.text("Referencia:", 14, y);
+      doc.setFont("helvetica", "bold").text("Referencia:", 14, y);
+      doc
+        .setFont("helvetica", "normal")
+        .text(
+          productos.find((p) => p.id === d.productoId)?.referencia || "",
+          50,
+          y
+        );
+      y += 7;
+      doc.setFont("helvetica", "bold").text("Descripción:", 14, y);
       doc.setFont("helvetica", "normal");
       const producto = productos.find((p) => p.id === d.productoId);
-      doc.text(producto?.referencia || "", 50, y);
-
-      y += 7;
-      doc.setFont("helvetica", "bold");
-      doc.text("Descripción:", 14, y);
-      doc.setFont("helvetica", "normal");
       const descripcion = d.descripcion || producto?.descripcion || "";
       const descLines = doc.splitTextToSize(descripcion, 140);
       doc.text(descLines, 50, y);
       y += descLines.length * 6;
-
-      doc.setFont("helvetica", "bold");
-      doc.text("Precio Unitario:", 14, y);
-      doc.setFont("helvetica", "normal");
-      doc.text(`$${d.precioUnitario.toLocaleString()}`, 50, y);
-
+      doc.setFont("helvetica", "bold").text("Precio Unitario:", 14, y);
+      doc
+        .setFont("helvetica", "normal")
+        .text(`$${d.precioUnitario.toLocaleString()}`, 50, y);
       y += 7;
-      doc.setFont("helvetica", "bold");
-      doc.text("Cantidad:", 14, y);
-      doc.setFont("helvetica", "normal");
-      doc.text(String(d.cantidad), 50, y);
-
+      doc.setFont("helvetica", "bold").text("Cantidad:", 14, y);
+      doc.setFont("helvetica", "normal").text(String(d.cantidad), 50, y);
       y += 7;
-      doc.setFont("helvetica", "bold");
-      doc.text("Descuento:", 14, y);
-      doc.setFont("helvetica", "normal");
-      let descuentoTexto =
-        d.tipoDescuento === "ValorAbsoluto"
-          ? `$${d.valorDescuento?.toLocaleString() || 0}`
-          : `${d.valorDescuento || 0}%`;
-      doc.text(descuentoTexto, 50, y);
-
+      doc.setFont("helvetica", "bold").text("Descuento:", 14, y);
+      doc
+        .setFont("helvetica", "normal")
+        .text(
+          d.tipoDescuento === "ValorAbsoluto"
+            ? `$${d.valorDescuento?.toLocaleString() || 0}`
+            : `${d.valorDescuento || 0}%`,
+          50,
+          y
+        );
       y += 7;
-      doc.setFont("helvetica", "bold");
-      doc.text("Subtotal:", 14, y);
-      doc.setFont("helvetica", "normal");
-      // Calcula el subtotal con descuento si no viene
-      let subtotal = d.subtotal;
-      if (subtotal === undefined) {
-        subtotal = calcularSubtotal(
+      doc.setFont("helvetica", "bold").text("Subtotal:", 14, y);
+      const sub =
+        d.subtotal ??
+        calcularSubtotal(
           d.precioUnitario,
           d.cantidad,
-          d.descuentoTipo,
-          d.descuentoValor
+          d.tipoDescuento,
+          d.valorDescuento
         );
-      }
-      doc.text(`$${subtotal.toLocaleString()}`, 50, y);
-
+      doc
+        .setFont("helvetica", "normal")
+        .text(`$${sub.toLocaleString()}`, 50, y);
       y += 10;
-      // Línea separadora entre productos
       if (idx < recibo.detalles.length - 1) {
-        doc.setDrawColor(200);
-        doc.line(14, y, 196, y);
+        doc.setDrawColor(200).line(14, y, 196, y);
         y += 5;
       }
-
-      // Salto de página si es necesario
       if (y > 270) {
         doc.addPage();
         y = 20;
       }
     });
 
+    // Totales e IVA
+    const aplicaIva = recibo.detalles.some((d) => d.valorIva > 0);
+    const total = recibo.detalles.reduce((sum, d) => sum + d.subtotal, 0);
+    let subtotalSinIVA = aplicaIva
+      ? recibo.detalles.reduce((sum, d) => sum + (d.subtotal - d.valorIva), 0)
+      : total;
+    const ivaValor = aplicaIva
+      ? recibo.detalles.reduce((sum, d) => sum + d.valorIva, 0)
+      : 0;
+
+    let yT = y + 10;
+    doc
+      .setFontSize(12)
+      .setFont("helvetica", "bold")
+      .text("Aplica IVA:", 14, yT);
+    doc.setFont("helvetica", "normal").text(aplicaIva ? "Sí" : "No", 60, yT);
+    if (aplicaIva) {
+      yT += 7;
+      doc.setFont("helvetica", "bold").text("Subtotal sin IVA:", 120, yT);
+      doc.setFont("helvetica", "normal").text(
+        `$${subtotalSinIVA.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+        })}`,
+        170,
+        yT
+      );
+      yT += 7;
+      doc.setFont("helvetica", "bold").text("IVA (19%):", 120, yT);
+      doc.setFont("helvetica", "normal").text(
+        `$${ivaValor.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+        })}`,
+        170,
+        yT
+      );
+    }
+    yT += 7;
+    doc.setFont("helvetica", "bold").text("Total:", 120, yT);
+    doc
+      .setFont("helvetica", "normal")
+      .text(`$${total.toLocaleString()}`, 170, yT);
+
     doc.save(`recibo_${numeroRecibo || Date.now()}.pdf`);
   }
 
-  // Nueva función para eliminar recibo, accede a los estados
   const handleEliminarRecibo = async (id) => {
     try {
       await eliminarRecibo(id);
-      setRecibos((prev) => prev.filter((r) => r.id !== id));
-      setFiltrados((prev) => prev.filter((r) => r.id !== id));
+      setRecibos((r) => r.filter((x) => x.id !== id));
+      setFiltrados((f) => f.filter((x) => x.id !== id));
       toast.success("Recibo eliminado correctamente");
     } catch {
       toast.error("Error al eliminar el recibo");
@@ -283,7 +288,6 @@ export default function TodosRecibos() {
         />
       </div>
 
-      {/* Barra de búsqueda */}
       <div className="input-group mb-4 shadow-sm">
         <input
           type="text"
@@ -322,18 +326,19 @@ export default function TodosRecibos() {
                     (c) => c.id === recibo.clienteId
                   );
                   const documento = cliente
-                    ? `${cliente.tipoDocumento || ""} ${
-                        cliente.numeroDocumento || ""
-                      }`
+                    ? `${cliente.tipoDocumento} ${cliente.numeroDocumento}`
                     : "";
+                  // Nuevo cálculo aquí:
+                  const aplicaIva = recibo.detalles.some((d) => d.valorIva > 0);
+                  const total = recibo.detalles.reduce(
+                    (sum, d) => sum + d.subtotal,
+                    0
+                  );
+
                   return (
                     <tr key={recibo.id}>
                       <td>{recibo.id.slice(-12)}</td>
-                      <td>
-                        {cliente
-                          ? `${cliente.nombre} ${cliente.apellido || ""}`
-                          : "Desconocido"}
-                      </td>
+                      <td>{getNombreCliente(recibo.clienteId)}</td>
                       <td>{documento}</td>
                       <td>{new Date(recibo.fecha).toLocaleString()}</td>
                       <td>${recibo.total.toLocaleString()}</td>
@@ -357,40 +362,36 @@ export default function TodosRecibos() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {recibo.detalles.map((detalle) => (
-                                  <tr key={detalle.id || detalle.productoId}>
-                                    <td>{detalle.cantidad}</td>
+                                {recibo.detalles.map((det) => (
+                                  <tr key={det.id || det.productoId}>
+                                    <td>{det.cantidad}</td>
+                                    <td>{getNombreProducto(det.productoId)}</td>
                                     <td>
-                                      {getNombreProducto(detalle.productoId)}
+                                      ${det.precioUnitario.toLocaleString()}
                                     </td>
                                     <td>
-                                      ${detalle.precioUnitario.toLocaleString()}
-                                    </td>
-                                    <td>
-                                      {detalle.tipoDescuento === "ValorAbsoluto"
+                                      {det.tipoDescuento === "ValorAbsoluto"
                                         ? `$${
-                                            detalle.valorDescuento?.toLocaleString() ||
+                                            det.valorDescuento?.toLocaleString() ||
                                             0
                                           }`
-                                        : `${detalle.valorDescuento || 0}%`}
+                                        : `${det.valorDescuento || 0}%`}
                                     </td>
-                                    <td>
-                                      ${detalle.subtotal.toLocaleString()}
-                                    </td>
+                                    <td>${det.subtotal.toLocaleString()}</td>
                                   </tr>
                                 ))}
                               </tbody>
                             </table>
                           </div>
-                          <div>
+                          <div className="mt-2">
                             <button
-                              className="btn btn-outline-accent btn-sm mt-2"
+                              className="btn btn-outline-accent btn-sm"
                               onClick={() => descargarPDF(recibo)}
                             >
                               Descargar PDF
                             </button>
                             <button
-                              className="btn btn-danger btn-sm mt-2 ms-2"
+                              className="btn btn-danger btn-sm ms-2"
                               onClick={() =>
                                 mostrarToastConfirmacion(() =>
                                   handleEliminarRecibo(recibo.id)
@@ -399,6 +400,42 @@ export default function TodosRecibos() {
                             >
                               Anular recibo
                             </button>
+                          </div>
+                          <div className="mt-2 text-end">
+                            <div>
+                              <strong>Aplica IVA:</strong>{" "}
+                              {aplicaIva ? "Sí" : "No"}
+                            </div>
+                            {aplicaIva && (
+                              <>
+                                <div>
+                                  <strong>Subtotal sin IVA:</strong> $
+                                  {recibo.detalles
+                                    .reduce(
+                                      (acc, d) =>
+                                        acc + (d.subtotal - (d.valorIva || 0)),
+                                      0
+                                    )
+                                    .toLocaleString(undefined, {
+                                      maximumFractionDigits: 2,
+                                    })}
+                                </div>
+                                <div>
+                                  <strong>IVA (19%):</strong> $
+                                  {recibo.detalles
+                                    .reduce(
+                                      (acc, d) => acc + (d.valorIva || 0),
+                                      0
+                                    )
+                                    .toLocaleString(undefined, {
+                                      maximumFractionDigits: 2,
+                                    })}
+                                </div>
+                              </>
+                            )}
+                            <div>
+                              <strong>Total:</strong> ${total.toLocaleString()}
+                            </div>
                           </div>
                         </div>
                       </td>
