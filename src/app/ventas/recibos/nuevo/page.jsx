@@ -235,11 +235,45 @@ export default function CrearReciboPage() {
       for (const p of productosRecibo) {
         const productoActual = productos.find((prod) => prod.id === p.id);
         const nuevoStock = productoActual.cantidadStock - p.cantidad;
+
+        // Mostrar advertencia si el stock es igual o menor a 2
+        if (nuevoStock <= 2 && nuevoStock > 0) {
+          toast.info(
+            ({ closeToast }) => (
+              <div>
+                <div>
+                  <strong>Advertencia:</strong> quedan pocas unidades del
+                  producto "{productoActual.nombre}"
+                </div>
+                <button
+                  className="btn btn-sm btn-warning mt-2"
+                  onClick={closeToast}
+                >
+                  Cerrar
+                </button>
+              </div>
+            ),
+            {
+              autoClose: false,
+              closeOnClick: false,
+              draggable: false,
+              position: "top-center",
+              style: { minWidth: 320 },
+            }
+          );
+        }
+
+        // Inactivar si el stock es 0
         if (nuevoStock <= 0) {
           await actualizarProducto(p.id, {
             ...productoActual,
             cantidadStock: 0,
             activo: false,
+          });
+        } else {
+          await actualizarProducto(p.id, {
+            ...productoActual,
+            cantidadStock: nuevoStock,
           });
         }
       }
@@ -625,7 +659,9 @@ export default function CrearReciboPage() {
                                   wordBreak: "break-word",
                                   maxWidth: 300,
                                   minWidth: 200,
-                                  verticalAlign: "top",
+                                  verticalAlign: "middle", // <-- Cambia "top" por "middle"
+                                  paddingTop: "0.75rem", // Opcional: iguala el padding vertical
+                                  paddingBottom: "0.75rem", // Opcional: iguala el padding vertical
                                 }}
                               >
                                 {p.descripcion}
