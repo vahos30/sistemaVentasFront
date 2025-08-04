@@ -284,43 +284,80 @@ export default function CrearReciboPage() {
     }
   };
 
-  function descargarPDF(recibo) {
+  async function descargarPDF(recibo) {
     const doc = new jsPDF();
     const numeroRecibo = recibo.id ? recibo.id.slice(-12) : "";
 
-    // Título principal
+    // Cargar imagen logo
+    const logoBase64 = await getBase64FromUrl("/LogoAYM.jpg");
+
+    // Centrar logo
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const logoWidth = 40;
+    const logoHeight = 24;
+    const logoX = (pageWidth - logoWidth) / 2;
+    const logoY = 12;
+
+    doc.addImage(logoBase64, "JPEG", logoX, logoY, logoWidth, logoHeight);
+
+    // Centrar datos empresa debajo del logo, con espacio extra
+    let infoY = logoY + logoHeight + 8;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("AYM ELECTRODOMESTICOS SAS", pageWidth / 2, infoY, {
+      align: "center",
+    });
+    doc.setFont("helvetica", "normal");
+    doc.text("NIT 901.696.712-0", pageWidth / 2, infoY + 7, {
+      align: "center",
+    });
+    doc.text("CL 50 48 06", pageWidth / 2, infoY + 14, {
+      align: "center",
+    });
+    doc.text("Tel: (57) 3007510012", pageWidth / 2, infoY + 21, {
+      align: "center",
+    });
+    doc.text("Amagá - Colombia", pageWidth / 2, infoY + 28, {
+      align: "center",
+    });
+    doc.text("aymelectrodomesticos.sas@gmail.com", pageWidth / 2, infoY + 35, {
+      align: "center",
+    });
+
+    // Título principal debajo del bloque de datos
+    let y = infoY + 45;
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("Recibo de Compra", 14, 18);
+    doc.text("Recibo de Compra", 14, y);
 
     // Datos del recibo
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("Número de Recibo:", 14, 28);
+    doc.text("Número de Recibo:", 14, y + 10);
     doc.setFont("helvetica", "normal");
-    doc.text(numeroRecibo, 60, 28);
+    doc.text(numeroRecibo, 60, y + 10);
 
     doc.setFont("helvetica", "bold");
-    doc.text("Cliente:", 14, 36);
+    doc.text("Cliente:", 14, y + 18);
     doc.setFont("helvetica", "normal");
-    doc.text(`${recibo.cliente.nombre} ${recibo.cliente.apellido}`, 60, 36);
+    doc.text(`${recibo.cliente.nombre} ${recibo.cliente.apellido}`, 60, y + 18);
 
     doc.setFont("helvetica", "bold");
-    doc.text("Documento:", 14, 44);
+    doc.text("Documento:", 14, y + 26);
     doc.setFont("helvetica", "normal");
     doc.text(
       `${recibo.cliente.tipoDocumento} ${recibo.cliente.numeroDocumento}`,
       60,
-      44
+      y + 26
     );
 
     doc.setFont("helvetica", "bold");
-    doc.text("Fecha:", 14, 52);
+    doc.text("Fecha:", 14, y + 34);
     doc.setFont("helvetica", "normal");
-    doc.text(`${new Date(recibo.fecha).toLocaleString()}`, 60, 52);
+    doc.text(`${new Date(recibo.fecha).toLocaleString()}`, 60, y + 34);
 
     // Título productos
-    let y = 68;
+    y += 50;
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text("Productos", 14, y);
@@ -443,6 +480,16 @@ export default function CrearReciboPage() {
     doc.text(`$${total.toLocaleString()}`, 170, yTotales);
 
     doc.save(`recibo_${numeroRecibo || Date.now()}.pdf`);
+  }
+
+  async function getBase64FromUrl(url) {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
   }
 
   return (
@@ -804,7 +851,7 @@ export default function CrearReciboPage() {
                   <div className="text-end mt-3">
                     <button
                       className="btn btn-outline-success"
-                      onClick={() => descargarPDF(reciboCreado)}
+                      onClick={async () => await descargarPDF(reciboCreado)}
                     >
                       <i className="bi bi-file-earmark-pdf me-2"></i>
                       Descargar en PDF
