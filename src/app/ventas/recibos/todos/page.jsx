@@ -124,7 +124,17 @@ export default function TodosRecibos() {
     return subtotal > 0 ? subtotal : 0;
   };
 
-  function descargarPDF(recibo) {
+  async function getBase64FromUrl(url) {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function descargarPDF(recibo) {
     const doc = new jsPDF();
     const cliente = clientes.find((c) => c.id === recibo.clienteId);
     const documento = cliente
@@ -132,63 +142,102 @@ export default function TodosRecibos() {
       : "";
     const numeroRecibo = recibo.id.slice(-12);
 
-    // Título y datos básicos
+    // Cargar imagen logo
+    const logoBase64 = await getBase64FromUrl("/LogoAYM.jpg");
+
+    // Centrar logo
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const logoWidth = 40;
+    const logoHeight = 24;
+    const logoX = (pageWidth - logoWidth) / 2;
+    const logoY = 12;
+
+    doc.addImage(logoBase64, "JPEG", logoX, logoY, logoWidth, logoHeight);
+
+    // Centrar datos empresa debajo del logo, con espacio extra
+    let infoY = logoY + logoHeight + 8;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("AYM ELECTRODOMESTICOS SAS", pageWidth / 2, infoY, {
+      align: "center",
+    });
+    doc.setFont("helvetica", "normal");
+    doc.text("NIT 901.696.712-0", pageWidth / 2, infoY + 7, {
+      align: "center",
+    });
+    doc.text("CL 50 48 06", pageWidth / 2, infoY + 14, { align: "center" });
+    doc.text("Tel: (57) 3007510012", pageWidth / 2, infoY + 21, {
+      align: "center",
+    });
+    doc.text("Amagá - Colombia", pageWidth / 2, infoY + 28, {
+      align: "center",
+    });
+    doc.text("aymelectrodomesticos.sas@gmail.com", pageWidth / 2, infoY + 35, {
+      align: "center",
+    });
+
+    // Título principal debajo del bloque de datos
+    let y = infoY + 45;
     doc.setFontSize(18).setFont("helvetica", "bold");
-    doc.text("Recibo de Compra", 14, 18);
+    doc.text("Recibo de Compra", 14, y);
+
     doc.setFontSize(12).setFont("helvetica", "bold");
-    doc.text("Número de Recibo:", 14, 28);
-    doc.setFont("helvetica", "normal").text(numeroRecibo, 60, 28);
-    doc.setFont("helvetica", "bold").text("Cliente:", 14, 36);
+    doc.text("Número de Recibo:", 14, y + 10);
+    doc.setFont("helvetica", "normal").text(numeroRecibo, 60, y + 10);
+    doc.setFont("helvetica", "bold").text("Cliente:", 14, y + 18);
     doc
       .setFont("helvetica", "normal")
-      .text(getNombreCliente(recibo.clienteId), 60, 36);
-    doc.setFont("helvetica", "bold").text("Documento:", 14, 44);
-    doc.setFont("helvetica", "normal").text(documento, 60, 44);
-    doc.setFont("helvetica", "bold").text("Fecha:", 14, 52);
+      .text(getNombreCliente(recibo.clienteId), 60, y + 18);
+    doc.setFont("helvetica", "bold").text("Documento:", 14, y + 26);
+    doc.setFont("helvetica", "normal").text(documento, 60, y + 26);
+    doc.setFont("helvetica", "bold").text("Fecha:", 14, y + 34);
     doc
       .setFont("helvetica", "normal")
-      .text(new Date(recibo.fecha).toLocaleString(), 60, 52);
-    doc.setFont("helvetica", "bold").text("Total:", 14, 60);
+      .text(new Date(recibo.fecha).toLocaleString(), 60, y + 34);
+    doc.setFont("helvetica", "bold").text("Total:", 14, y + 42);
     doc
       .setFont("helvetica", "normal")
-      .text(`$${recibo.total.toLocaleString()}`, 60, 60);
+      .text(`$${recibo.total.toLocaleString()}`, 60, y + 42);
 
     // Productos
-    let y = 75;
-    doc.setFontSize(14).setFont("helvetica", "bold").text("Productos", 14, y);
-    y += 8;
+    let yProd = y + 57;
+    doc
+      .setFontSize(14)
+      .setFont("helvetica", "bold")
+      .text("Productos", 14, yProd);
+    yProd += 8;
     doc.setFontSize(12);
     recibo.detalles.forEach((d, idx) => {
-      doc.setFont("helvetica", "bold").text("Producto:", 14, y);
+      doc.setFont("helvetica", "bold").text("Producto:", 14, yProd);
       doc
         .setFont("helvetica", "normal")
-        .text(getNombreProducto(d.productoId), 50, y);
-      y += 7;
-      doc.setFont("helvetica", "bold").text("Referencia:", 14, y);
+        .text(getNombreProducto(d.productoId), 50, yProd);
+      yProd += 7;
+      doc.setFont("helvetica", "bold").text("Referencia:", 14, yProd);
       doc
         .setFont("helvetica", "normal")
         .text(
           productos.find((p) => p.id === d.productoId)?.referencia || "",
           50,
-          y
+          yProd
         );
-      y += 7;
-      doc.setFont("helvetica", "bold").text("Descripción:", 14, y);
+      yProd += 7;
+      doc.setFont("helvetica", "bold").text("Descripción:", 14, yProd);
       doc.setFont("helvetica", "normal");
       const producto = productos.find((p) => p.id === d.productoId);
       const descripcion = d.descripcion || producto?.descripcion || "";
       const descLines = doc.splitTextToSize(descripcion, 140);
-      doc.text(descLines, 50, y);
-      y += descLines.length * 6;
-      doc.setFont("helvetica", "bold").text("Precio Unitario:", 14, y);
+      doc.text(descLines, 50, yProd);
+      yProd += descLines.length * 6;
+      doc.setFont("helvetica", "bold").text("Precio Unitario:", 14, yProd);
       doc
         .setFont("helvetica", "normal")
-        .text(`$${d.precioUnitario.toLocaleString()}`, 50, y);
-      y += 7;
-      doc.setFont("helvetica", "bold").text("Cantidad:", 14, y);
-      doc.setFont("helvetica", "normal").text(String(d.cantidad), 50, y);
-      y += 7;
-      doc.setFont("helvetica", "bold").text("Descuento:", 14, y);
+        .text(`$${d.precioUnitario.toLocaleString()}`, 50, yProd);
+      yProd += 7;
+      doc.setFont("helvetica", "bold").text("Cantidad:", 14, yProd);
+      doc.setFont("helvetica", "normal").text(String(d.cantidad), 50, yProd);
+      yProd += 7;
+      doc.setFont("helvetica", "bold").text("Descuento:", 14, yProd);
       doc
         .setFont("helvetica", "normal")
         .text(
@@ -196,10 +245,10 @@ export default function TodosRecibos() {
             ? `$${d.valorDescuento?.toLocaleString() || 0}`
             : `${d.valorDescuento || 0}%`,
           50,
-          y
+          yProd
         );
-      y += 7;
-      doc.setFont("helvetica", "bold").text("Subtotal:", 14, y);
+      yProd += 7;
+      doc.setFont("helvetica", "bold").text("Subtotal:", 14, yProd);
       const sub =
         d.subtotal ??
         calcularSubtotal(
@@ -210,15 +259,15 @@ export default function TodosRecibos() {
         );
       doc
         .setFont("helvetica", "normal")
-        .text(`$${sub.toLocaleString()}`, 50, y);
-      y += 10;
+        .text(`$${sub.toLocaleString()}`, 50, yProd);
+      yProd += 10;
       if (idx < recibo.detalles.length - 1) {
-        doc.setDrawColor(200).line(14, y, 196, y);
-        y += 5;
+        doc.setDrawColor(200).line(14, yProd, 196, yProd);
+        yProd += 5;
       }
-      if (y > 270) {
+      if (yProd > 270) {
         doc.addPage();
-        y = 20;
+        yProd = 20;
       }
     });
 
@@ -232,7 +281,7 @@ export default function TodosRecibos() {
       ? recibo.detalles.reduce((sum, d) => sum + d.valorIva, 0)
       : 0;
 
-    let yT = y + 10;
+    let yT = yProd + 10;
     doc
       .setFontSize(12)
       .setFont("helvetica", "bold")
