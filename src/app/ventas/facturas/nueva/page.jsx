@@ -30,7 +30,6 @@ export default function CrearFacturaPage() {
   const [productosFactura, setProductosFactura] = useState([]);
   const [facturaCreada, setFacturaCreada] = useState(null);
   const [creando, setCreando] = useState(false);
-  const [aplicaIva, setAplicaIva] = useState("no");
 
   // Cargar productos disponibles
   useEffect(() => {
@@ -189,15 +188,12 @@ export default function CrearFacturaPage() {
             p.descuentoTipo === "porcentaje" ? "Porcentaje" : "ValorAbsoluto",
           valorDescuento: p.descuentoValor,
           subtotal,
-          valorIva: aplicaIva === "si" ? (subtotal * 0.19) / 1.19 : 0,
+          valorIva: (subtotal * 0.19) / 1.19, // Siempre aplica IVA
         };
       });
 
       // Calcular el IVA total solo si aplica
-      const valorIvaTotal =
-        aplicaIva === "si"
-          ? detalles.reduce((acc, d) => acc + d.valorIva, 0)
-          : 0;
+      const valorIvaTotal = detalles.reduce((acc, d) => acc + d.valorIva, 0);
 
       // Crear el objeto factura
       const factura = {
@@ -205,14 +201,14 @@ export default function CrearFacturaPage() {
         fecha: new Date().toISOString(),
         detalles,
         valorIva: valorIvaTotal,
-        aplicaIva: aplicaIva === "si",
+        aplicaIva: true, // Siempre true
       };
 
       const data = await crearFactura(factura);
       setFacturaCreada({
         ...data,
         cliente,
-        aplicaIva: aplicaIva === "si",
+        aplicaIva: true,
         detalles: data.detalles.map((d) => {
           const prod = productosFactura.find((p) => p.id === d.productoId);
           return {
@@ -446,28 +442,23 @@ export default function CrearFacturaPage() {
     doc
       .setFontSize(12)
       .setFont("helvetica", "bold")
-      .text("Aplica IVA:", 14, yT);
-    doc.setFont("helvetica", "normal").text(aplicaIva ? "Sí" : "No", 60, yT);
-    if (aplicaIva) {
-      yT += 7;
-      doc.setFont("helvetica", "bold").text("Subtotal sin IVA:", 120, yT);
-      doc.setFont("helvetica", "normal").text(
-        `$${subtotalSinIVA.toLocaleString(undefined, {
-          maximumFractionDigits: 2,
-        })}`,
-        170,
-        yT
-      );
-      yT += 7;
-      doc.setFont("helvetica", "bold").text("IVA (19%):", 120, yT);
-      doc.setFont("helvetica", "normal").text(
-        `$${ivaValor.toLocaleString(undefined, {
-          maximumFractionDigits: 2,
-        })}`,
-        170,
-        yT
-      );
-    }
+      .text("Subtotal sin IVA:", 120, yT);
+    doc.setFont("helvetica", "normal").text(
+      `$${subtotalSinIVA.toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+      })}`,
+      170,
+      yT
+    );
+    yT += 7;
+    doc.setFont("helvetica", "bold").text("IVA (19%):", 120, yT);
+    doc.setFont("helvetica", "normal").text(
+      `$${ivaValor.toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+      })}`,
+      170,
+      yT
+    );
     yT += 7;
     doc.setFont("helvetica", "bold").text("Total:", 120, yT);
     doc
@@ -590,22 +581,6 @@ export default function CrearFacturaPage() {
                         </strong>
                       </div>
                       <div>Descripción: {productoSeleccionado.descripcion}</div>
-
-                      {/* Select de IVA aquí */}
-                      <div className="mt-3 mb-2">
-                        <label className="form-label fw-semibold">
-                          ¿Aplicar IVA (19%)?
-                        </label>
-                        <select
-                          className="form-select"
-                          value={aplicaIva}
-                          onChange={(e) => setAplicaIva(e.target.value)}
-                          style={{ maxWidth: 200 }}
-                        >
-                          <option value="no">No</option>
-                          <option value="si">Sí</option>
-                        </select>
-                      </div>
 
                       <div className="mt-2 d-flex flex-wrap align-items-center gap-2">
                         <label className="me-2 mb-0">Cantidad:</label>
@@ -761,6 +736,40 @@ export default function CrearFacturaPage() {
                   </div>
                 )}
 
+                {/* Subtotales y total */}
+                {productosFactura.length > 0 && (
+                  <div className="mt-3 text-end">
+                    <div>
+                      <strong>Subtotal sin IVA:</strong> $
+                      {productosFactura
+                        .reduce(
+                          (acc, p) =>
+                            acc + (p.subtotal - (p.subtotal * 0.19) / 1.19),
+                          0
+                        )
+                        .toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })}
+                    </div>
+                    <div>
+                      <strong>IVA (19%):</strong> $
+                      {productosFactura
+                        .reduce((acc, p) => acc + (p.subtotal * 0.19) / 1.19, 0)
+                        .toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })}
+                    </div>
+                    <div>
+                      <strong>Total:</strong> $
+                      {productosFactura
+                        .reduce((acc, p) => acc + p.subtotal, 0)
+                        .toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Botón para crear factura */}
                 {productosFactura.length > 0 && (
                   <div className="text-end mt-3">
@@ -835,6 +844,33 @@ export default function CrearFacturaPage() {
                     </table>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resumen de totales de la factura creada */}
+          {facturaCreada && (
+            <div className="mt-3 text-end">
+              <div>
+                <strong>Subtotal sin IVA:</strong> $
+                {facturaCreada.detalles
+                  .reduce(
+                    (acc, d) => acc + ((d.subtotal || 0) - (d.valorIva || 0)),
+                    0
+                  )
+                  .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </div>
+              <div>
+                <strong>IVA (19%):</strong> $
+                {facturaCreada.detalles
+                  .reduce((acc, d) => acc + (d.valorIva || 0), 0)
+                  .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </div>
+              <div>
+                <strong>Total:</strong> $
+                {facturaCreada.detalles
+                  .reduce((acc, d) => acc + (d.subtotal || 0), 0)
+                  .toLocaleString(undefined, { maximumFractionDigits: 2 })}
               </div>
             </div>
           )}

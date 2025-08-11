@@ -25,3 +25,31 @@ export async function crearFactura(factura) {
   }
   return await respuesta.json();
 }
+//obtener las facturas anuladas
+export async function obtenerFacturasAnuladas() {
+  const respuesta = await fetch(`${BASE_URL}/anuladas`, { cache: "no-store" });
+  if (!respuesta.ok) {
+    throw new Error("Error al obtener las facturas anuladas");
+  }
+  return await respuesta.json();
+}
+
+// Anular una factura
+export async function anularFactura(id, motivo) {
+  const respuesta = await fetch(`${BASE_URL}/${id}/anular`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(motivo),
+  });
+  if (!respuesta.ok) {
+    throw new Error("Error al anular la factura");
+  }
+  // Si la respuesta es 204 No Content, retorna null
+  if (respuesta.status === 204) {
+    return null;
+  }
+  // Si hay contenido, retorna el JSON
+  return await respuesta.json();
+}
