@@ -35,7 +35,7 @@ export default function ModuloFacturas() {
           </div>
           <div className="mt-4 text-end">
             <BotonVolver
-              texto="← Volver al Modulo de Facturas"
+              texto="← Volver al Modulo de Ventas"
               to="/ventas"
               className="btn-sm"
             />

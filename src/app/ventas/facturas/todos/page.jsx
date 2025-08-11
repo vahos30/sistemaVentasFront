@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { obtenerFacturas } from "@/app/services/facturasService";
+import {
+  obtenerFacturas,
+  obtenerFacturasAnuladas,
+  anularFactura,
+} from "@/app/services/facturasService";
 import { obtenerClientes } from "@/app/services/clienteServices";
 import { obtenerProductos } from "@/app/services/productosService";
 import BotonVolver from "@/app/components/BotonVolver";
@@ -16,6 +20,17 @@ export default function TodasFacturas() {
   const [filtradas, setFiltradas] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
+  const [facturasAnuladas, setFacturasAnuladas] = useState([]);
+  const [modalAnular, setModalAnular] = useState({
+    abierto: false,
+    factura: null,
+  });
+  const [motivoAnulacion, setMotivoAnulacion] = useState("");
+  const [modalNotaCredito, setModalNotaCredito] = useState({
+    abierto: false,
+    nota: null,
+    cliente: null,
+  });
   const toastMostrado = useRef(false);
 
   useEffect(() => {
@@ -46,6 +61,16 @@ export default function TodasFacturas() {
       }
     };
     cargarDatos();
+  }, []);
+
+  useEffect(() => {
+    const cargarAnuladas = async () => {
+      try {
+        const anuladas = await obtenerFacturasAnuladas();
+        setFacturasAnuladas(anuladas);
+      } catch (e) {}
+    };
+    cargarAnuladas();
   }, []);
 
   // Filtrar facturas por nombre/apellido/documento
@@ -248,11 +273,6 @@ export default function TodasFacturas() {
       : 0;
 
     let yT = yProd + 10;
-    doc
-      .setFontSize(12)
-      .setFont("helvetica", "bold")
-      .text("Aplica IVA:", 14, yT);
-    doc.setFont("helvetica", "normal").text(aplicaIva ? "Sí" : "No", 60, yT);
     if (aplicaIva) {
       yT += 7;
       doc.setFont("helvetica", "bold").text("Subtotal sin IVA:", 120, yT);
@@ -280,6 +300,161 @@ export default function TodasFacturas() {
       .text(`$${total.toLocaleString()}`, 170, yT);
 
     doc.save(`factura_${numeroFactura || Date.now()}.pdf`);
+  }
+
+  async function descargarNotaCreditoPDF(nota, cliente) {
+    const doc = new jsPDF();
+
+    // Cargar imagen logo
+    const logoBase64 = await getBase64FromUrl("/LogoAYM.jpg");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const logoWidth = 40;
+    const logoHeight = 24;
+    const logoX = (pageWidth - logoWidth) / 2;
+    const logoY = 12;
+
+    doc.addImage(logoBase64, "JPEG", logoX, logoY, logoWidth, logoHeight);
+
+    // Datos empresa
+    let infoY = logoY + logoHeight + 8;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("AYM ELECTRODOMESTICOS SAS", pageWidth / 2, infoY, {
+      align: "center",
+    });
+    doc.setFont("helvetica", "normal");
+    doc.text("NIT 901.696.712-0", pageWidth / 2, infoY + 7, {
+      align: "center",
+    });
+    doc.text("CL 50 48 06", pageWidth / 2, infoY + 14, { align: "center" });
+    doc.text("Tel: (57) 3007510012", pageWidth / 2, infoY + 21, {
+      align: "center",
+    });
+    doc.text("Amagá - Colombia", pageWidth / 2, infoY + 28, {
+      align: "center",
+    });
+    doc.text("aymelectrodomesticos.sas@gmail.com", pageWidth / 2, infoY + 35, {
+      align: "center",
+    });
+
+    // Título
+    let y = infoY + 45;
+    doc.setFontSize(18).setFont("helvetica", "bold");
+    doc.text("Nota Crédito", 14, y);
+
+    doc.setFontSize(12).setFont("helvetica", "bold");
+    doc.text("Número Nota Crédito:", 14, y + 10);
+    doc.setFont("helvetica", "normal").text(nota.numeroNotaCredito, 70, y + 10);
+
+    doc.setFont("helvetica", "bold").text("Factura Anulada:", 14, y + 18);
+    doc.setFont("helvetica", "normal").text(nota.numeroFactura, 70, y + 18);
+
+    doc.setFont("helvetica", "bold").text("Cliente:", 14, y + 26);
+    doc
+      .setFont("helvetica", "normal")
+      .text(
+        cliente ? `${cliente.nombre} ${cliente.apellido || ""}` : "Desconocido",
+        70,
+        y + 26
+      );
+
+    doc.setFont("helvetica", "bold").text("Motivo de Anulación:", 14, y + 34);
+    doc.setFont("helvetica", "normal").text(nota.motivoAnulacion, 70, y + 34);
+
+    doc.setFont("helvetica", "bold").text("Fecha de Anulación:", 14, y + 42);
+    doc
+      .setFont("helvetica", "normal")
+      .text(new Date(nota.fechaAnulacion).toLocaleString(), 70, y + 42);
+
+    doc.setFont("helvetica", "bold").text("Total:", 14, y + 50);
+    doc
+      .setFont("helvetica", "normal")
+      .text(`$${nota.total.toLocaleString()}`, 70, y + 50);
+
+    doc.save(`nota_credito_${nota.numeroNotaCredito || Date.now()}.pdf`);
+  }
+
+  function estaAnulada(numeroFactura) {
+    return facturasAnuladas.some((f) => f.numeroFactura === numeroFactura);
+  }
+
+  async function handleAnularFactura() {
+    if (!motivoAnulacion.trim()) {
+      toast.error("Debe escribir el motivo de anulación.");
+      return;
+    }
+    try {
+      const infoAnulada = await anularFactura(
+        modalAnular.factura.id,
+        motivoAnulacion
+      );
+      setModalAnular({ abierto: false, factura: null });
+      setMotivoAnulacion("");
+      const anuladas = await obtenerFacturasAnuladas();
+      setFacturasAnuladas(anuladas);
+
+      if (infoAnulada) {
+        toast.info(
+          <div>
+            <div>
+              <strong>Factura anulada:</strong> {infoAnulada.numeroFactura}
+            </div>
+            <div>
+              <strong>Nota crédito:</strong> {infoAnulada.numeroNotaCredito}
+            </div>
+            <div>
+              <strong>Motivo:</strong> {infoAnulada.motivoAnulacion}
+            </div>
+            <div>
+              <strong>Fecha:</strong>{" "}
+              {new Date(infoAnulada.fechaAnulacion).toLocaleString()}
+            </div>
+            <div>
+              <strong>Total:</strong> ${infoAnulada.total.toLocaleString()}
+            </div>
+          </div>,
+          { autoClose: false }
+        );
+      } else {
+        toast.success("Factura anulada correctamente.");
+      }
+    } catch (e) {
+      toast.error("Error al anular la factura");
+    }
+  }
+
+  function confirmarAnulacion(factura) {
+    toast.warn(
+      ({ closeToast }) => (
+        <div>
+          <div>¿Está seguro que desea anular esta factura?</div>
+          <div className="mt-2 d-flex justify-content-end gap-2">
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={() => {
+                closeToast();
+                setModalAnular({ abierto: true, factura });
+              }}
+            >
+              Sí
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={closeToast}>
+              No
+            </button>
+          </div>
+        </div>
+      ),
+      { autoClose: false }
+    );
+  }
+
+  // Busca la información de la nota crédito y el cliente
+  function verNotaCredito(factura) {
+    const nota = facturasAnuladas.find(
+      (f) => f.numeroFactura === factura.numeroFactura
+    );
+    const cliente = clientes.find((c) => c.id === factura.clienteId);
+    setModalNotaCredito({ abierto: true, nota, cliente });
   }
 
   return (
@@ -321,6 +496,7 @@ export default function TodasFacturas() {
                 <th>Fecha</th>
                 <th>Total</th>
                 <th>Detalles de la Factura</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -401,49 +577,62 @@ export default function TodasFacturas() {
                             </button>
                           </div>
                           <div className="mt-2 text-end">
-                            <div>
-                              <strong>Aplica IVA:</strong>{" "}
-                              {aplicaIva ? "Sí" : "No"}
-                            </div>
-                            {aplicaIva && (
-                              <>
-                                <div>
-                                  <strong>Subtotal sin IVA:</strong> $
-                                  {factura.detalles
-                                    .reduce(
-                                      (acc, d) =>
-                                        acc + (d.subtotal - (d.valorIva || 0)),
-                                      0
-                                    )
-                                    .toLocaleString(undefined, {
-                                      maximumFractionDigits: 2,
-                                    })}
-                                </div>
-                                <div>
-                                  <strong>IVA (19%):</strong> $
-                                  {factura.detalles
-                                    .reduce(
-                                      (acc, d) => acc + (d.valorIva || 0),
-                                      0
-                                    )
-                                    .toLocaleString(undefined, {
-                                      maximumFractionDigits: 2,
-                                    })}
-                                </div>
-                              </>
+                            {estaAnulada(factura.numeroFactura) && (
+                              <div>
+                                <span className="text-danger fw-bold">
+                                  FACTURA ANULADA
+                                </span>
+                              </div>
                             )}
+                            <div>
+                              <strong>Subtotal sin IVA:</strong> $
+                              {factura.detalles
+                                .reduce(
+                                  (acc, d) =>
+                                    acc + (d.subtotal - (d.valorIva || 0)),
+                                  0
+                                )
+                                .toLocaleString(undefined, {
+                                  maximumFractionDigits: 2,
+                                })}
+                            </div>
+                            <div>
+                              <strong>IVA (19%):</strong> $
+                              {factura.detalles
+                                .reduce((acc, d) => acc + (d.valorIva || 0), 0)
+                                .toLocaleString(undefined, {
+                                  maximumFractionDigits: 2,
+                                })}
+                            </div>
                             <div>
                               <strong>Total:</strong> ${total.toLocaleString()}
                             </div>
                           </div>
                         </div>
                       </td>
+                      <td>
+                        {estaAnulada(factura.numeroFactura) ? (
+                          <button
+                            className="btn btn-info btn-sm"
+                            onClick={() => verNotaCredito(factura)}
+                          >
+                            Ver Nota Crédito
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => confirmarAnulacion(factura)}
+                          >
+                            Anular Factura
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center text-muted py-4">
+                  <td colSpan={7} className="text-center text-muted py-4">
                     {busqueda
                       ? `No se encontraron facturas para "${busqueda}"`
                       : "No hay facturas registradas"}
@@ -455,6 +644,140 @@ export default function TodasFacturas() {
           <div className="text-end text-muted small mt-2">
             Mostrando {filtradas.length}{" "}
             {filtradas.length === 1 ? "factura" : "facturas"}
+          </div>
+        </div>
+      )}
+
+      {modalAnular.abierto && (
+        <div
+          className="modal fade show"
+          style={{ display: "block", background: "#0008" }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Anular Factura</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() =>
+                    setModalAnular({ abierto: false, factura: null })
+                  }
+                ></button>
+              </div>
+              <div className="modal-body">
+                <label className="form-label">
+                  Por favor escriba el motivo de anulación:
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={motivoAnulacion}
+                  onChange={(e) => setMotivoAnulacion(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() =>
+                    setModalAnular({ abierto: false, factura: null })
+                  }
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={handleAnularFactura}
+                >
+                  Anular
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nota Crédito */}
+      {modalNotaCredito.abierto && modalNotaCredito.nota && (
+        <div
+          className="modal fade show"
+          style={{ display: "block", background: "#0008" }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Nota Crédito</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() =>
+                    setModalNotaCredito({
+                      abierto: false,
+                      nota: null,
+                      cliente: null,
+                    })
+                  }
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-2">
+                  <strong>Cliente:</strong>{" "}
+                  {modalNotaCredito.cliente
+                    ? `${modalNotaCredito.cliente.nombre} ${
+                        modalNotaCredito.cliente.apellido || ""
+                      }`
+                    : "Desconocido"}
+                </div>
+                <div className="mb-2">
+                  <strong>Número de Factura Anulada:</strong>{" "}
+                  {modalNotaCredito.nota.numeroFactura}
+                </div>
+                <div className="mb-2">
+                  <strong>Número Nota Crédito:</strong>{" "}
+                  {modalNotaCredito.nota.numeroNotaCredito}
+                </div>
+                <div className="mb-2">
+                  <strong>Motivo de Anulación:</strong>{" "}
+                  {modalNotaCredito.nota.motivoAnulacion}
+                </div>
+                <div className="mb-2">
+                  <strong>Fecha de Anulación:</strong>{" "}
+                  {new Date(
+                    modalNotaCredito.nota.fechaAnulacion
+                  ).toLocaleString()}
+                </div>
+                <div className="mb-2">
+                  <strong>Total:</strong> $
+                  {modalNotaCredito.nota.total.toLocaleString()}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-success"
+                  onClick={() =>
+                    descargarNotaCreditoPDF(
+                      modalNotaCredito.nota,
+                      modalNotaCredito.cliente
+                    )
+                  }
+                >
+                  Descargar en PDF
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() =>
+                    setModalNotaCredito({
+                      abierto: false,
+                      nota: null,
+                      cliente: null,
+                    })
+                  }
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
