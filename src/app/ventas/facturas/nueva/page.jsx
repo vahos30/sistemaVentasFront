@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { obtenerClientes } from "@/app/services/clienteServices";
 import {
   obtenerProductos,
@@ -27,6 +27,11 @@ export default function CrearFacturaPage() {
   const [cantidad, setCantidad] = useState(1);
   const [descuentoTipo, setDescuentoTipo] = useState("porcentaje");
   const [descuentoValor, setDescuentoValor] = useState(0);
+
+  // Forma de pago por producto
+  const [formaPago, setFormaPago] = useState(""); // Para el menú desplegable
+  const formaPagoRef = useRef(null); // Para enfocar el input si no se selecciona
+
   const [productosFactura, setProductosFactura] = useState([]);
   const [facturaCreada, setFacturaCreada] = useState(null);
   const [creando, setCreando] = useState(false);
@@ -83,6 +88,7 @@ export default function CrearFacturaPage() {
     setCantidad(1);
     setDescuentoTipo("porcentaje");
     setDescuentoValor(0);
+    setFormaPago(""); // Reinicia la forma de pago al seleccionar producto
   };
 
   // Calcular subtotal con descuento
@@ -119,6 +125,11 @@ export default function CrearFacturaPage() {
       toast.error("El descuento en valor no puede ser negativo.");
       return;
     }
+    if (!formaPago) {
+      toast.error("Por favor seleccione una forma de pago.");
+      formaPagoRef.current?.focus();
+      return;
+    }
     const subtotal = calcularSubtotal(
       productoSeleccionado.precio,
       cantidad,
@@ -134,6 +145,7 @@ export default function CrearFacturaPage() {
         descuentoValor,
         subtotal,
         descripcion: productoSeleccionado.descripcion,
+        formaPago, // Guarda la forma de pago seleccionada
       },
     ]);
     setProductoSeleccionado(null);
@@ -141,6 +153,7 @@ export default function CrearFacturaPage() {
     setCantidad(1);
     setDescuentoTipo("porcentaje");
     setDescuentoValor(0);
+    setFormaPago(""); // Reinicia la forma de pago
   };
 
   // Editar descuento de un producto ya agregado
@@ -170,6 +183,12 @@ export default function CrearFacturaPage() {
       toast.error("Debe seleccionar un cliente y al menos un producto.");
       return;
     }
+    // Validar que todos los productos tengan forma de pago
+    const sinFormaPago = productosFactura.find((p) => !p.formaPago);
+    if (sinFormaPago) {
+      toast.error("Todos los productos deben tener una forma de pago.");
+      return;
+    }
     setCreando(true);
     try {
       // Calcular detalles y el IVA solo si aplica
@@ -188,12 +207,15 @@ export default function CrearFacturaPage() {
             p.descuentoTipo === "porcentaje" ? "Porcentaje" : "ValorAbsoluto",
           valorDescuento: p.descuentoValor,
           subtotal,
-          valorIva: (subtotal * 0.19) / 1.19, // Siempre aplica IVA
+          valorIva: (subtotal * 0.19) / 1.19,
         };
       });
 
       // Calcular el IVA total solo si aplica
       const valorIvaTotal = detalles.reduce((acc, d) => acc + d.valorIva, 0);
+
+      // Tomar la forma de pago del primer producto (puedes cambiar la lógica si quieres que sea por factura)
+      const formaPagoFactura = productosFactura[0]?.formaPago || "";
 
       // Crear el objeto factura
       const factura = {
@@ -201,7 +223,8 @@ export default function CrearFacturaPage() {
         fecha: new Date().toISOString(),
         detalles,
         valorIva: valorIvaTotal,
-        aplicaIva: true, // Siempre true
+        aplicaIva: true,
+        formaPago: formaPagoFactura, // Aquí se guarda en la factura
       };
 
       const data = await crearFactura(factura);
@@ -209,7 +232,8 @@ export default function CrearFacturaPage() {
         ...data,
         cliente,
         aplicaIva: true,
-        detalles: data.detalles.map((d) => {
+        formaPago: formaPagoFactura,
+        detalles: data.detalles.map((d, idx) => {
           const prod = productosFactura.find((p) => p.id === d.productoId);
           return {
             ...d,
@@ -222,17 +246,17 @@ export default function CrearFacturaPage() {
               prod?.descuentoTipo || "porcentaje",
               prod?.descuentoValor || 0
             ),
+            formaPago: prod?.formaPago || formaPagoFactura,
           };
         }),
       });
       toast.success("Factura creada exitosamente");
 
-      // Después de crear la factura, actualiza productos con stock 0
+      // Actualiza productos con stock 0
       for (const p of productosFactura) {
         const productoActual = productos.find((prod) => prod.id === p.id);
         const nuevoStock = productoActual.cantidadStock - p.cantidad;
 
-        // Mostrar advertencia si el stock es igual o menor a 2
         if (nuevoStock <= 2 && nuevoStock > 0) {
           toast.info(
             ({ closeToast }) => (
@@ -259,7 +283,6 @@ export default function CrearFacturaPage() {
           );
         }
 
-        // Inactivar si el stock es 0
         if (nuevoStock <= 0) {
           await actualizarProducto(p.id, {
             ...productoActual,
@@ -294,10 +317,8 @@ export default function CrearFacturaPage() {
     const doc = new jsPDF();
     const numeroFactura = factura.numeroFactura || factura.NumeroFactura || "";
     const cliente = factura.cliente || {};
-    // Cargar imagen logo
     const logoBase64 = await getBase64FromUrl("/LogoAYM.jpg");
 
-    // Centrar logo
     const pageWidth = doc.internal.pageSize.getWidth();
     const logoWidth = 40;
     const logoHeight = 24;
@@ -306,7 +327,6 @@ export default function CrearFacturaPage() {
 
     doc.addImage(logoBase64, "JPEG", logoX, logoY, logoWidth, logoHeight);
 
-    // Centrar datos empresa debajo del logo, con espacio extra
     let infoY = logoY + logoHeight + 8;
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
@@ -330,7 +350,6 @@ export default function CrearFacturaPage() {
       align: "center",
     });
 
-    // Título principal debajo del bloque de datos
     let y = infoY + 45;
     doc.setFontSize(18).setFont("helvetica", "bold");
     doc.text("Factura de Venta", 14, y);
@@ -358,8 +377,11 @@ export default function CrearFacturaPage() {
         60,
         y + 34
       );
+    doc.setFont("helvetica", "bold").text("Forma de Pago:", 14, y + 42);
+    doc
+      .setFont("helvetica", "normal")
+      .text(factura.formaPago || "", 60, y + 42);
 
-    // Título productos
     let yProd = y + 50;
     doc
       .setFontSize(14)
@@ -421,7 +443,6 @@ export default function CrearFacturaPage() {
       }
     });
 
-    // Totales e IVA
     const aplicaIva =
       factura.aplicaIva || factura.detalles.some((d) => d.valorIva > 0);
     const total = factura.detalles.reduce(
@@ -621,6 +642,23 @@ export default function CrearFacturaPage() {
                             descuentoTipo === "porcentaje" ? "%" : "$"
                           }
                         />
+                        {/* Menú desplegable de forma de pago */}
+                        <label className="ms-3 me-2 mb-0">Forma de pago:</label>
+                        <select
+                          ref={formaPagoRef}
+                          className="form-select"
+                          style={{ width: 180, minWidth: 150 }}
+                          value={formaPago}
+                          onChange={(e) => setFormaPago(e.target.value)}
+                          required
+                        >
+                          <option value="">Seleccione</option>
+                          <option value="Contado">Contado</option>
+                          <option value="Transferencia">Transferencia</option>
+                          <option value="Tarjeta de crédito">
+                            Tarjeta de crédito
+                          </option>
+                        </select>
                         <BotonAgregar
                           onClick={handleAgregarProducto}
                           texto="Agregar a la factura"
@@ -652,6 +690,8 @@ export default function CrearFacturaPage() {
                             <th>Precio Unitario</th>
                             <th>Descuento</th>
                             <th>Subtotal</th>
+                            <th>Forma de pago</th>
+                            <th></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -719,6 +759,7 @@ export default function CrearFacturaPage() {
                                 </div>
                               </td>
                               <td>${p.subtotal.toLocaleString()}</td>
+                              <td>{p.formaPago}</td>
                               <td>
                                 <button
                                   type="button"
@@ -811,6 +852,9 @@ export default function CrearFacturaPage() {
                     <strong>Fecha:</strong>{" "}
                     {new Date(facturaCreada.fecha).toLocaleString()}
                   </div>
+                  <div>
+                    <strong>Forma de Pago:</strong> {facturaCreada.formaPago}
+                  </div>
                   <div className="mt-3 table-responsive">
                     <table className="table table-bordered align-middle mb-0">
                       <thead>
@@ -822,6 +866,7 @@ export default function CrearFacturaPage() {
                           <th>Cantidad</th>
                           <th>Descuento</th>
                           <th>Subtotal</th>
+                          <th>Forma de pago</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -838,6 +883,7 @@ export default function CrearFacturaPage() {
                                 : `${d.valorDescuento || 0}%`}
                             </td>
                             <td>${d.subtotal.toLocaleString()}</td>
+                            <td>{d.formaPago}</td>
                           </tr>
                         ))}
                       </tbody>

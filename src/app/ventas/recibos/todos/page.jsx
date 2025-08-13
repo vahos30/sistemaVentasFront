@@ -181,6 +181,7 @@ export default function TodosRecibos() {
     doc.setFontSize(18).setFont("helvetica", "bold");
     doc.text("Recibo de Compra", 14, y);
 
+    // Encabezado del recibo
     doc.setFontSize(12).setFont("helvetica", "bold");
     doc.text("Número de Recibo:", 14, y + 10);
     doc.setFont("helvetica", "normal").text(numeroRecibo, 60, y + 10);
@@ -194,12 +195,10 @@ export default function TodosRecibos() {
     doc
       .setFont("helvetica", "normal")
       .text(new Date(recibo.fecha).toLocaleString(), 60, y + 34);
-    doc.setFont("helvetica", "bold").text("Total:", 14, y + 42);
-    doc
-      .setFont("helvetica", "normal")
-      .text(`$${recibo.total.toLocaleString()}`, 60, y + 42);
+    // NUEVO: Forma de pago general del recibo (si existe)
+    doc.setFont("helvetica", "bold").text("Forma de Pago:", 14, y + 42);
+    doc.setFont("helvetica", "normal").text(recibo.formaPago || "", 60, y + 42);
 
-    // Productos
     let yProd = y + 57;
     doc
       .setFontSize(14)
@@ -207,6 +206,8 @@ export default function TodosRecibos() {
       .text("Productos", 14, yProd);
     yProd += 8;
     doc.setFontSize(12);
+
+    // Productos
     recibo.detalles.forEach((d, idx) => {
       doc.setFont("helvetica", "bold").text("Producto:", 14, yProd);
       doc
@@ -260,6 +261,12 @@ export default function TodosRecibos() {
       doc
         .setFont("helvetica", "normal")
         .text(`$${sub.toLocaleString()}`, 50, yProd);
+      yProd += 7;
+      // NUEVO: Forma de pago por producto (si existe)
+      doc.setFont("helvetica", "bold").text("Forma de Pago:", 14, yProd);
+      doc
+        .setFont("helvetica", "normal")
+        .text(d.formaPago || recibo.formaPago || "", 50, yProd);
       yProd += 10;
       if (idx < recibo.detalles.length - 1) {
         doc.setDrawColor(200).line(14, yProd, 196, yProd);
