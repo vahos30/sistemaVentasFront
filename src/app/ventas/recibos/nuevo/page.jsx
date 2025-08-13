@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { obtenerClientes } from "@/app/services/clienteServices";
 import {
   obtenerProductos,
@@ -31,6 +31,10 @@ export default function CrearReciboPage() {
   const [reciboCreado, setReciboCreado] = useState(null);
   const [creando, setCreando] = useState(false);
   const [aplicaIva, setAplicaIva] = useState("no");
+
+  // 1. Agrega el estado para la forma de pago
+  const [formaPago, setFormaPago] = useState(""); // Nueva línea
+  const formaPagoRef = useRef(null); // Nueva línea
 
   // Cargar productos disponibles
   useEffect(() => {
@@ -84,6 +88,7 @@ export default function CrearReciboPage() {
     setCantidad(1);
     setDescuentoTipo("porcentaje");
     setDescuentoValor(0);
+    setFormaPago(""); // Nueva línea
   };
 
   // Calcular subtotal con descuento
@@ -120,6 +125,11 @@ export default function CrearReciboPage() {
       toast.error("El descuento en valor no puede ser negativo.");
       return;
     }
+    if (!formaPago) {
+      toast.error("Por favor seleccione una forma de pago.");
+      formaPagoRef.current?.focus();
+      return;
+    }
     const subtotal = calcularSubtotal(
       productoSeleccionado.precio,
       cantidad,
@@ -135,6 +145,7 @@ export default function CrearReciboPage() {
         descuentoValor,
         subtotal,
         descripcion: productoSeleccionado.descripcion,
+        formaPago, // Guarda la forma de pago seleccionada
       },
     ]);
     setProductoSeleccionado(null);
@@ -142,6 +153,7 @@ export default function CrearReciboPage() {
     setCantidad(1);
     setDescuentoTipo("porcentaje");
     setDescuentoValor(0);
+    setFormaPago(""); // Reinicia la forma de pago
   };
 
   // Editar descuento de un producto ya agregado
@@ -171,6 +183,12 @@ export default function CrearReciboPage() {
       toast.error("Debe seleccionar un cliente y al menos un producto.");
       return;
     }
+    // Validar que todos los productos tengan forma de pago
+    const sinFormaPago = productosRecibo.find((p) => !p.formaPago);
+    if (sinFormaPago) {
+      toast.error("Todos los productos deben tener una forma de pago.");
+      return;
+    }
     setCreando(true);
     try {
       // Calcular detalles y el IVA solo si aplica
@@ -190,6 +208,7 @@ export default function CrearReciboPage() {
           valorDescuento: p.descuentoValor,
           subtotal,
           valorIva: aplicaIva === "si" ? (subtotal * 0.19) / 1.19 : 0, // <-- solo si aplica IVA
+          formaPago: p.formaPago, // Guarda la forma de pago en cada detalle
         };
       });
 
@@ -199,6 +218,9 @@ export default function CrearReciboPage() {
           ? detalles.reduce((acc, d) => acc + d.valorIva, 0)
           : 0;
 
+      // Toma la forma de pago del primer producto (puedes cambiar la lógica si quieres que sea por recibo)
+      const formaPagoRecibo = productosRecibo[0]?.formaPago || "";
+
       // Crear el objeto recibo
       const recibo = {
         clienteId: cliente.id,
@@ -206,6 +228,7 @@ export default function CrearReciboPage() {
         detalles,
         valorIva: valorIvaTotal, // <-- solo si aplica IVA
         aplicaIva: aplicaIva === "si", // <-- para saber si aplica IVA
+        formaPago: formaPagoRecibo, // Guarda la forma de pago en el recibo
       };
 
       const data = await crearRecibo(recibo);
@@ -226,6 +249,7 @@ export default function CrearReciboPage() {
               prod?.descuentoTipo || "porcentaje",
               prod?.descuentoValor || 0
             ),
+            formaPago: prod?.formaPago || d.formaPago || "", // <-- AGREGA ESTA LÍNEA
           };
         }),
       });
@@ -356,8 +380,14 @@ export default function CrearReciboPage() {
     doc.setFont("helvetica", "normal");
     doc.text(`${new Date(recibo.fecha).toLocaleString()}`, 60, y + 34);
 
+    // NUEVO: Forma de pago
+    doc.setFont("helvetica", "bold");
+    doc.text("Forma de Pago:", 14, y + 42);
+    doc.setFont("helvetica", "normal");
+    doc.text(recibo.formaPago || "", 60, y + 42);
+
+    y += 50; // Ajusta el salto para los productos
     // Título productos
-    y += 50;
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text("Productos", 14, y);
@@ -662,6 +692,23 @@ export default function CrearReciboPage() {
                             descuentoTipo === "porcentaje" ? "%" : "$"
                           }
                         />
+                        {/* Menú desplegable de forma de pago */}
+                        <label className="ms-3 me-2 mb-0">Forma de pago:</label>
+                        <select
+                          ref={formaPagoRef}
+                          className="form-select"
+                          style={{ width: 180, minWidth: 150 }}
+                          value={formaPago}
+                          onChange={(e) => setFormaPago(e.target.value)}
+                          required
+                        >
+                          <option value="">Seleccione</option>
+                          <option value="Contado">Contado</option>
+                          <option value="Transferencia">Transferencia</option>
+                          <option value="Tarjeta de crédito">
+                            Tarjeta de crédito
+                          </option>
+                        </select>
                         <BotonAgregar
                           onClick={handleAgregarProducto}
                           texto="Agregar al recibo"
@@ -681,7 +728,7 @@ export default function CrearReciboPage() {
                     <div style={{ maxWidth: "100%", overflowX: "auto" }}>
                       <table
                         className="table tabla-detalle-recibo mb-0"
-                        style={{ minWidth: 1000 }}
+                        style={{ minWidth: 1100 }}
                       >
                         <thead>
                           <tr>
@@ -693,6 +740,8 @@ export default function CrearReciboPage() {
                             <th>Precio Unitario</th>
                             <th>Descuento</th>
                             <th>Subtotal</th>
+                            <th>Forma de pago</th> {/* Nueva columna */}
+                            <th></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -706,9 +755,9 @@ export default function CrearReciboPage() {
                                   wordBreak: "break-word",
                                   maxWidth: 300,
                                   minWidth: 200,
-                                  verticalAlign: "middle", // <-- Cambia "top" por "middle"
-                                  paddingTop: "0.75rem", // Opcional: iguala el padding vertical
-                                  paddingBottom: "0.75rem", // Opcional: iguala el padding vertical
+                                  verticalAlign: "middle",
+                                  paddingTop: "0.75rem",
+                                  paddingBottom: "0.75rem",
                                 }}
                               >
                                 {p.descripcion}
@@ -760,6 +809,8 @@ export default function CrearReciboPage() {
                                 </div>
                               </td>
                               <td>${p.subtotal.toLocaleString()}</td>
+                              <td>{p.formaPago}</td>{" "}
+                              {/* Muestra la forma de pago */}
                               <td>
                                 <button
                                   type="button"
@@ -816,6 +867,9 @@ export default function CrearReciboPage() {
                     <strong>Fecha:</strong>{" "}
                     {new Date(reciboCreado.fecha).toLocaleString()}
                   </div>
+                  <div>
+                    <strong>Forma de Pago:</strong> {reciboCreado.formaPago}
+                  </div>
                   <div className="mt-3 table-responsive">
                     <table className="table table-bordered align-middle mb-0">
                       <thead>
@@ -827,6 +881,7 @@ export default function CrearReciboPage() {
                           <th>Cantidad</th>
                           <th>Descuento</th>
                           <th>Subtotal</th>
+                          <th>Forma de pago</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -843,6 +898,7 @@ export default function CrearReciboPage() {
                                 : `${d.valorDescuento || 0}%`}
                             </td>
                             <td>${d.subtotal.toLocaleString()}</td>
+                            <td>{d.formaPago}</td>
                           </tr>
                         ))}
                       </tbody>
