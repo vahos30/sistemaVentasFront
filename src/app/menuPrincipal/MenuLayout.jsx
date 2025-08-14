@@ -105,9 +105,12 @@ export default function MenuLayout({ children }) {
               </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link d-flex align-items-center" href="#">
+              <Link
+                className="nav-link d-flex align-items-center"
+                href="/proveedor"
+              >
                 <i className="bi bi-gear me-3 fs-5"></i>
-                <span>Configuración</span>
+                <span>Proveedores</span>
               </Link>
             </li>
           </ul>
