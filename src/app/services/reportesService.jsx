@@ -27,3 +27,20 @@ export async function obtenerVentasPorCliente(busqueda) {
 
   return { cliente, ventas };
 }
+//obtener las ventas diarias
+export async function obtenerVentasDiarias() {
+  const res = await fetch(`${BASE_URL}/ventas-diarias`);
+  if (!res.ok) throw new Error("Error al obtener las ventas diarias");
+  return await res.json();
+}
+
+//Obtener ventas por fecha
+export async function obtenerVentasPorFecha(fechaInicio, fechaFin) {
+  const res = await fetch(
+    `${BASE_URL}/ventas?fechaInicio=${encodeURIComponent(
+      fechaInicio
+    )}&fechaFin=${encodeURIComponent(fechaFin)}`
+  );
+  if (!res.ok) throw new Error("Error al obtener las ventas por fecha");
+  return await res.json();
+}
