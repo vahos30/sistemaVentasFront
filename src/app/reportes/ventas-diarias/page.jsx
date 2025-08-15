@@ -2,16 +2,34 @@
 
 import React, { useEffect, useState } from "react";
 import { obtenerVentasDiarias } from "@/app/services/reportesService";
+import { obtenerFacturasAnuladas } from "@/app/services/facturasService";
 import BotonVolver from "@/app/components/BotonVolver";
 import { toast } from "react-toastify";
 
 export default function VentasDiariasPage() {
   const [ventas, setVentas] = useState([]);
-  const [cargando, setCargando] = useState(false);
+  const [cargandoVentas, setCargandoVentas] = useState(true);
+  const [cargandoAnuladas, setCargandoAnuladas] = useState(true);
+  const [facturasAnuladas, setFacturasAnuladas] = useState([]);
+
+  useEffect(() => {
+    const cargarFacturasAnuladas = async () => {
+      try {
+        const anuladas = await obtenerFacturasAnuladas();
+        setFacturasAnuladas(anuladas);
+      } catch {}
+      setCargandoAnuladas(false);
+    };
+    cargarFacturasAnuladas();
+  }, []);
+
+  function estaAnulada(numeroFactura) {
+    return facturasAnuladas.some((f) => f.numeroFactura === numeroFactura);
+  }
 
   useEffect(() => {
     const cargarVentas = async () => {
-      setCargando(true);
+      setCargandoVentas(true);
       try {
         const data = await obtenerVentasDiarias();
         // Combina recibos y facturas en un solo array, agregando el tipo
@@ -20,11 +38,13 @@ export default function VentasDiariasPage() {
           tipo: "Recibo",
           numero: r.id.slice(-8),
         }));
-        const facturas = (data.facturas || []).map((f) => ({
-          ...f,
-          tipo: "Factura",
-          numero: f.numeroFactura || f.id.slice(-8),
-        }));
+        const facturas = (data.facturas || [])
+          .filter((f) => !estaAnulada(f.numeroFactura)) // Filtra las anuladas
+          .map((f) => ({
+            ...f,
+            tipo: "Factura",
+            numero: f.numeroFactura || f.id.slice(-8),
+          }));
         const todasVentas = [...recibos, ...facturas].sort(
           (a, b) => new Date(b.fecha) - new Date(a.fecha)
         );
@@ -32,27 +52,29 @@ export default function VentasDiariasPage() {
       } catch {
         toast.error("Error al obtener las ventas diarias");
       } finally {
-        setCargando(false);
+        setCargandoVentas(false);
       }
     };
-    cargarVentas();
-  }, []);
+    if (!cargandoAnuladas) {
+      cargarVentas();
+    }
+  }, [cargandoAnuladas, facturasAnuladas]); // <- importante: depende de facturasAnuladas
 
   return (
     <div className="container py-4">
       <h2 className="mb-4 text-primary">Ventas Diarias</h2>
 
-      {cargando && (
+      {(cargandoVentas || cargandoAnuladas) && (
         <div className="alert alert-info">Cargando ventas diarias...</div>
       )}
 
-      {!cargando && ventas.length === 0 && (
+      {!cargandoVentas && !cargandoAnuladas && ventas.length === 0 && (
         <div className="alert alert-warning">
           No hay ventas registradas hoy.
         </div>
       )}
 
-      {ventas.length > 0 && (
+      {!cargandoVentas && !cargandoAnuladas && ventas.length > 0 && (
         <div className="mt-4">
           <div className="table-responsive">
             <table className="table table-bordered table-hover">
