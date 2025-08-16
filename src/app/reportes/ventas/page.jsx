@@ -20,7 +20,13 @@ export default function VentasPorFechaPage() {
     setCargando(true);
     setVentas([]);
     try {
-      const data = await obtenerVentasPorFecha(fechaInicio, fechaFin);
+      // Agrega la hora para cubrir todo el rango del día
+      const fechaInicioCompleta = fechaInicio + "T00:00:00";
+      const fechaFinCompleta = fechaFin + "T23:59:59";
+      const data = await obtenerVentasPorFecha(
+        fechaInicioCompleta,
+        fechaFinCompleta
+      );
       const recibos = (data.recibos || []).map((r) => ({
         ...r,
         tipo: "Recibo",
