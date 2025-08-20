@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { obtenerVentasPorFecha } from "@/app/services/reportesService";
+import { obtenerClientes } from "@/app/services/clienteServices";
 import BotonBuscar from "@/app/components/BotonBuscar";
 import BotonVolver from "@/app/components/BotonVolver";
 import { toast } from "react-toastify";
@@ -11,6 +12,19 @@ export default function VentasPorFechaPage() {
   const [fechaFin, setFechaFin] = useState("");
   const [ventas, setVentas] = useState([]);
   const [cargando, setCargando] = useState(false);
+  const [clientes, setClientes] = useState([]);
+
+  useEffect(() => {
+    const cargarClientes = async () => {
+      try {
+        const data = await obtenerClientes();
+        setClientes(data);
+      } catch {
+        toast.error("Error al cargar los clientes");
+      }
+    };
+    cargarClientes();
+  }, []);
 
   const handleConsultar = async () => {
     if (!fechaInicio || !fechaFin) {
@@ -31,11 +45,13 @@ export default function VentasPorFechaPage() {
         ...r,
         tipo: "Recibo",
         numero: r.id.slice(-8),
+        clienteNombre: obtenerNombreCompleto(r.clienteId),
       }));
       const facturas = (data.facturas || []).map((f) => ({
         ...f,
         tipo: "Factura",
         numero: f.numeroFactura || f.id.slice(-8),
+        clienteNombre: obtenerNombreCompleto(f.clienteId),
       }));
       const todasVentas = [...recibos, ...facturas].sort(
         (a, b) => new Date(b.fecha) - new Date(a.fecha)
@@ -50,6 +66,11 @@ export default function VentasPorFechaPage() {
       setCargando(false);
     }
   };
+
+  function obtenerNombreCompleto(clienteId) {
+    const cliente = clientes.find((c) => c.id === clienteId);
+    return cliente ? `${cliente.nombre} ${cliente.apellido || ""}`.trim() : "-";
+  }
 
   return (
     <div className="container py-4">
@@ -92,6 +113,7 @@ export default function VentasPorFechaPage() {
                 <tr>
                   <th>Tipo</th>
                   <th>#</th>
+                  <th>Cliente</th>
                   <th>Fecha</th>
                   <th>Total</th>
                   <th>Forma de Pago</th>
@@ -113,6 +135,7 @@ export default function VentasPorFechaPage() {
                       </span>
                     </td>
                     <td>{v.numero}</td>
+                    <td>{v.clienteNombre}</td>
                     <td>{new Date(v.fecha).toLocaleString()}</td>
                     <td>${v.total?.toLocaleString()}</td>
                     <td>{v.formaPago || "No registrado"}</td>

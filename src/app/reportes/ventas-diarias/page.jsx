@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { obtenerVentasDiarias } from "@/app/services/reportesService";
 import { obtenerFacturasAnuladas } from "@/app/services/facturasService";
+import { obtenerClientes } from "@/app/services/clienteServices";
 import BotonVolver from "@/app/components/BotonVolver";
 import { toast } from "react-toastify";
 
@@ -11,6 +12,19 @@ export default function VentasDiariasPage() {
   const [cargandoVentas, setCargandoVentas] = useState(true);
   const [cargandoAnuladas, setCargandoAnuladas] = useState(true);
   const [facturasAnuladas, setFacturasAnuladas] = useState([]);
+  const [clientes, setClientes] = useState([]);
+
+  useEffect(() => {
+    const cargarClientes = async () => {
+      try {
+        const data = await obtenerClientes();
+        setClientes(data);
+      } catch {
+        toast.error("Error al cargar los clientes");
+      }
+    };
+    cargarClientes();
+  }, []);
 
   useEffect(() => {
     const cargarFacturasAnuladas = async () => {
@@ -27,23 +41,29 @@ export default function VentasDiariasPage() {
     return facturasAnuladas.some((f) => f.numeroFactura === numeroFactura);
   }
 
+  function obtenerNombreCliente(clienteId) {
+    const cliente = clientes.find((c) => c.id === clienteId);
+    return cliente ? `${cliente.nombre} ${cliente.apellido || ""}`.trim() : "-";
+  }
+
   useEffect(() => {
     const cargarVentas = async () => {
       setCargandoVentas(true);
       try {
         const data = await obtenerVentasDiarias();
-        // Combina recibos y facturas en un solo array, agregando el tipo
         const recibos = (data.recibos || []).map((r) => ({
           ...r,
           tipo: "Recibo",
           numero: r.id.slice(-8),
+          clienteNombre: obtenerNombreCliente(r.clienteId),
         }));
         const facturas = (data.facturas || [])
-          .filter((f) => !estaAnulada(f.numeroFactura)) // Filtra las anuladas
+          .filter((f) => !estaAnulada(f.numeroFactura))
           .map((f) => ({
             ...f,
             tipo: "Factura",
             numero: f.numeroFactura || f.id.slice(-8),
+            clienteNombre: obtenerNombreCliente(f.clienteId),
           }));
         const todasVentas = [...recibos, ...facturas].sort(
           (a, b) => new Date(b.fecha) - new Date(a.fecha)
@@ -55,10 +75,10 @@ export default function VentasDiariasPage() {
         setCargandoVentas(false);
       }
     };
-    if (!cargandoAnuladas) {
+    if (!cargandoAnuladas && clientes.length > 0) {
       cargarVentas();
     }
-  }, [cargandoAnuladas, facturasAnuladas]); // <- importante: depende de facturasAnuladas
+  }, [cargandoAnuladas, facturasAnuladas, clientes]);
 
   return (
     <div className="container py-4">
@@ -82,6 +102,7 @@ export default function VentasDiariasPage() {
                 <tr>
                   <th>Tipo</th>
                   <th>#</th>
+                  <th>Cliente</th>
                   <th>Fecha</th>
                   <th>Total</th>
                   <th>Forma de Pago</th>
@@ -103,6 +124,7 @@ export default function VentasDiariasPage() {
                       </span>
                     </td>
                     <td>{v.numero}</td>
+                    <td>{v.clienteNombre}</td>
                     <td>{new Date(v.fecha).toLocaleString()}</td>
                     <td>${v.total?.toLocaleString()}</td>
                     <td>{v.formaPago || "No registrado"}</td>
