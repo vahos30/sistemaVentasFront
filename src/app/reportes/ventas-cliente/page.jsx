@@ -35,6 +35,7 @@ export default function VentasPorClientePage() {
           ...f,
           tipo: "Factura",
           numero: f.numeroFactura || f.id.slice(-8),
+          anulada: f.anulada,
         }));
 
         // Junta y ordena por fecha descendente
@@ -108,15 +109,17 @@ export default function VentasPorClientePage() {
                 {ventas.map((v) => (
                   <tr key={v.id}>
                     <td>
-                      <span
-                        className={
-                          v.tipo === "Factura"
-                            ? "badge bg-primary"
-                            : "badge bg-success"
-                        }
-                      >
-                        {v.tipo}
-                      </span>
+                      {v.tipo === "Factura" ? (
+                        v.anulada ? (
+                          <span className="badge bg-danger">
+                            Factura Anulada
+                          </span>
+                        ) : (
+                          <span className="badge bg-primary">Factura</span>
+                        )
+                      ) : (
+                        <span className="badge bg-success">Recibo</span>
+                      )}
                     </td>
                     <td>{v.numero}</td>
                     <td>{new Date(v.fecha).toLocaleString()}</td>

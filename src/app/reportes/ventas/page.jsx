@@ -52,6 +52,7 @@ export default function VentasPorFechaPage() {
         tipo: "Factura",
         numero: f.numeroFactura || f.id.slice(-8),
         clienteNombre: obtenerNombreCompleto(f.clienteId),
+        anulada: f.anulada, // asegúrate de traer este campo
       }));
       const todasVentas = [...recibos, ...facturas].sort(
         (a, b) => new Date(b.fecha) - new Date(a.fecha)
@@ -124,15 +125,17 @@ export default function VentasPorFechaPage() {
                 {ventas.map((v) => (
                   <tr key={v.id}>
                     <td>
-                      <span
-                        className={
-                          v.tipo === "Factura"
-                            ? "badge bg-primary"
-                            : "badge bg-success"
-                        }
-                      >
-                        {v.tipo}
-                      </span>
+                      {v.tipo === "Factura" ? (
+                        v.anulada ? (
+                          <span className="badge bg-danger">
+                            Factura Anulada
+                          </span>
+                        ) : (
+                          <span className="badge bg-primary">Factura</span>
+                        )
+                      ) : (
+                        <span className="badge bg-success">Recibo</span>
+                      )}
                     </td>
                     <td>{v.numero}</td>
                     <td>{v.clienteNombre}</td>
