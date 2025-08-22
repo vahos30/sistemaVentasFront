@@ -5,7 +5,22 @@ import { obtenerVentasDiarias } from "@/app/services/reportesService";
 import { obtenerFacturasAnuladas } from "@/app/services/facturasService";
 import { obtenerClientes } from "@/app/services/clienteServices";
 import BotonVolver from "@/app/components/BotonVolver";
+import BotonDescargarPDF from "@/app/components/BotonDescargarPDF";
 import { toast } from "react-toastify";
+
+function esHoyEnColombia(fechaUTC) {
+  const fechaCol = new Date(
+    new Date(fechaUTC).toLocaleString("en-US", { timeZone: "America/Bogota" })
+  );
+  const hoyCol = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/Bogota" })
+  );
+  return (
+    fechaCol.getFullYear() === hoyCol.getFullYear() &&
+    fechaCol.getMonth() === hoyCol.getMonth() &&
+    fechaCol.getDate() === hoyCol.getDate()
+  );
+}
 
 export default function VentasDiariasPage() {
   const [ventas, setVentas] = useState([]);
@@ -51,14 +66,18 @@ export default function VentasDiariasPage() {
       setCargandoVentas(true);
       try {
         const data = await obtenerVentasDiarias();
-        const recibos = (data.recibos || []).map((r) => ({
-          ...r,
-          tipo: "Recibo",
-          numero: r.id.slice(-8),
-          clienteNombre: obtenerNombreCliente(r.clienteId),
-        }));
+        const recibos = (data.recibos || [])
+          .filter((r) => esHoyEnColombia(r.fecha))
+          .map((r) => ({
+            ...r,
+            tipo: "Recibo",
+            numero: r.id.slice(-8),
+            clienteNombre: obtenerNombreCliente(r.clienteId),
+          }));
         const facturas = (data.facturas || [])
-          .filter((f) => !estaAnulada(f.numeroFactura))
+          .filter(
+            (f) => esHoyEnColombia(f.fecha) && !estaAnulada(f.numeroFactura)
+          )
           .map((f) => ({
             ...f,
             tipo: "Factura",
@@ -125,7 +144,11 @@ export default function VentasDiariasPage() {
                     </td>
                     <td>{v.numero}</td>
                     <td>{v.clienteNombre}</td>
-                    <td>{new Date(v.fecha).toLocaleString()}</td>
+                    <td>
+                      {new Date(v.fecha).toLocaleString("es-CO", {
+                        timeZone: "America/Bogota",
+                      })}
+                    </td>
                     <td>${v.total?.toLocaleString()}</td>
                     <td>{v.formaPago || "No registrado"}</td>
                     <td>
@@ -169,6 +192,23 @@ export default function VentasDiariasPage() {
           texto="← Volver al Módulo de Reportes"
           to="/reportes"
           className="btn-sm"
+        />
+        <BotonDescargarPDF
+          data={ventas}
+          fileName="ventas-diarias.pdf"
+          title="Reporte de Ventas Diarias"
+          columns={[
+            { label: "Tipo", key: "tipo" },
+            { label: "#", key: "numero" },
+            { label: "Cliente", key: "clienteNombre" },
+            {
+              label: "Fecha",
+              render: (v) => new Date(v.fecha).toLocaleString(),
+            },
+            { label: "Total", render: (v) => `$${v.total?.toLocaleString()}` },
+            { label: "Forma de Pago", key: "formaPago" },
+            // Puedes agregar más columnas si lo deseas
+          ]}
         />
       </div>
     </div>
