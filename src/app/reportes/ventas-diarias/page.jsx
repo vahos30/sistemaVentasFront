@@ -103,6 +103,65 @@ export default function VentasDiariasPage() {
     <div className="container py-4">
       <h2 className="mb-4 text-primary">Ventas Diarias</h2>
 
+      {ventas.length > 0 && (
+        <div className="mb-3">
+          <BotonDescargarPDF
+            data={ventas}
+            fileName="ventas-diarias.pdf"
+            title="Reporte de Ventas Diarias"
+            columns={[
+              {
+                label: "Tipo",
+                render: (v) =>
+                  v.tipo === "Factura"
+                    ? v.anulada
+                      ? "Factura Anulada"
+                      : "Factura"
+                    : "Recibo",
+              },
+              { label: "#", key: "numero" },
+              { label: "Cliente", key: "clienteNombre" },
+              {
+                label: "Fecha",
+                render: (v) =>
+                  new Date(v.fecha).toLocaleString("es-CO", {
+                    timeZone: "America/Bogota",
+                  }),
+              },
+              {
+                label: "Total",
+                render: (v) => `$${v.total?.toLocaleString()}`,
+              },
+              { label: "Forma de Pago", key: "formaPago" },
+              {
+                label: "Detalles",
+                render: (v) =>
+                  (v.detalles || [])
+                    .map(
+                      (d) =>
+                        `Cant: ${
+                          d.cantidad
+                        } | Unit: $${d.precioUnitario?.toLocaleString()}${
+                          d.valorDescuento > 0
+                            ? ` | Desc: ${
+                                d.tipoDescuento === "ValorAbsoluto"
+                                  ? `$${d.valorDescuento?.toLocaleString()}`
+                                  : `${d.valorDescuento}%`
+                              }`
+                            : ""
+                        }${
+                          d.valorIva > 0
+                            ? ` | IVA: $${d.valorIva?.toLocaleString()}`
+                            : ""
+                        }`
+                    )
+                    .join("\n"),
+              },
+            ]}
+          />
+        </div>
+      )}
+
       {(cargandoVentas || cargandoAnuladas) && (
         <div className="alert alert-info">Cargando ventas diarias...</div>
       )}
@@ -192,23 +251,6 @@ export default function VentasDiariasPage() {
           texto="← Volver al Módulo de Reportes"
           to="/reportes"
           className="btn-sm"
-        />
-        <BotonDescargarPDF
-          data={ventas}
-          fileName="ventas-diarias.pdf"
-          title="Reporte de Ventas Diarias"
-          columns={[
-            { label: "Tipo", key: "tipo" },
-            { label: "#", key: "numero" },
-            { label: "Cliente", key: "clienteNombre" },
-            {
-              label: "Fecha",
-              render: (v) => new Date(v.fecha).toLocaleString(),
-            },
-            { label: "Total", render: (v) => `$${v.total?.toLocaleString()}` },
-            { label: "Forma de Pago", key: "formaPago" },
-            // Puedes agregar más columnas si lo deseas
-          ]}
         />
       </div>
     </div>

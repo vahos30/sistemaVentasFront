@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { obtenerCompras } from "@/app/services/compraService";
 import BotonVolver from "@/app/components/BotonVolver";
+import BotonDescargarPDF from "@/app/components/BotonDescargarPDF";
 import { toast } from "react-toastify";
 
 export default function ReporteComprasPage() {
@@ -57,6 +58,43 @@ export default function ReporteComprasPage() {
         <h2>Reporte de Compras</h2>
         <BotonVolver texto="← Volver a Reportes" to="/reportes" />
       </div>
+
+      {/* Botón de descarga PDF */}
+      {Array.isArray(filtradas) && filtradas.length > 0 && (
+        <div className="mb-3">
+          <BotonDescargarPDF
+            data={filtradas || []}
+            fileName="reporte-compras.pdf"
+            title="Reporte de Compras"
+            columns={[
+              { label: "Proveedor", render: (c) => c.proveedor?.nombre || "-" },
+              {
+                label: "Fecha",
+                render: (c) =>
+                  new Date(c.fecha).toLocaleString("es-CO", {
+                    timeZone: "America/Bogota",
+                  }),
+              },
+              {
+                label: "Total",
+                render: (c) => `$${c.total?.toLocaleString()}`,
+              },
+              {
+                label: "Detalles",
+                render: (c) =>
+                  (c.detalles || [])
+                    .map(
+                      (d) =>
+                        `Producto: ${d.producto?.nombre || "-"} | Cantidad: ${
+                          d.cantidad
+                        } | Precio unitario: $${d.precioUnitario?.toLocaleString()} | Subtotal: $${d.subTotal?.toLocaleString()}`
+                    )
+                    .join("\n"),
+              },
+            ]}
+          />
+        </div>
+      )}
 
       <div className="row mb-3">
         <div className="col-md-4 mb-2">
