@@ -63,24 +63,49 @@ export default function NuevaCompraPage() {
       toast.error("Complete correctamente todos los detalles de la compra");
       return;
     }
-    setEnviando(true);
-    try {
-      await crearCompra({
-        proveedorId,
-        detalles: detalles.map((d) => ({
-          productoId: d.productoId,
-          cantidad: Number(d.cantidad),
-          precioUnitario: Number(d.precioUnitario),
-        })),
-      });
-      toast.success("Compra registrada exitosamente");
-      setProveedorId("");
-      setDetalles([{ productoId: "", cantidad: 1, precioUnitario: 0 }]);
-    } catch (error) {
-      toast.error("Error al registrar la compra");
-    } finally {
-      setEnviando(false);
-    }
+
+    // Mostrar confirmación personalizada
+    toast(
+      ({ closeToast }) => (
+        <div>
+          <div className="mb-2">¿Desea registrar esta compra?</div>
+          <div className="d-flex justify-content-end gap-2">
+            <button
+              className="btn btn-success btn-sm"
+              onClick={async () => {
+                closeToast();
+                setEnviando(true);
+                try {
+                  await crearCompra({
+                    proveedorId,
+                    detalles: detalles.map((d) => ({
+                      productoId: d.productoId,
+                      cantidad: Number(d.cantidad),
+                      precioUnitario: Number(d.precioUnitario),
+                    })),
+                  });
+                  toast.success("Compra registrada exitosamente");
+                  setProveedorId("");
+                  setDetalles([
+                    { productoId: "", cantidad: 1, precioUnitario: 0 },
+                  ]);
+                } catch (error) {
+                  toast.error("Error al registrar la compra");
+                } finally {
+                  setEnviando(false);
+                }
+              }}
+            >
+              Sí
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={closeToast}>
+              No
+            </button>
+          </div>
+        </div>
+      ),
+      { autoClose: false }
+    );
   };
 
   return (

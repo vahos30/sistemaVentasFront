@@ -5,6 +5,7 @@ import { obtenerVentasPorFecha } from "@/app/services/reportesService";
 import { obtenerClientes } from "@/app/services/clienteServices";
 import BotonBuscar from "@/app/components/BotonBuscar";
 import BotonVolver from "@/app/components/BotonVolver";
+import BotonDescargarPDF from "@/app/components/BotonDescargarPDF";
 import { toast } from "react-toastify";
 
 export default function VentasPorFechaPage() {
@@ -105,6 +106,65 @@ export default function VentasPorFechaPage() {
           />
         </div>
       </div>
+
+      {ventas.length > 0 && (
+        <div className="mb-3">
+          <BotonDescargarPDF
+            data={ventas}
+            fileName="ventas-por-fecha.pdf"
+            title="Reporte de Ventas por Fecha"
+            columns={[
+              {
+                label: "Tipo",
+                render: (v) =>
+                  v.tipo === "Factura"
+                    ? v.anulada
+                      ? "Factura Anulada"
+                      : "Factura"
+                    : "Recibo",
+              },
+              { label: "#", key: "numero" },
+              { label: "Cliente", key: "clienteNombre" },
+              {
+                label: "Fecha",
+                render: (v) =>
+                  new Date(v.fecha).toLocaleString("es-CO", {
+                    timeZone: "America/Bogota",
+                  }),
+              },
+              {
+                label: "Total",
+                render: (v) => `$${v.total?.toLocaleString()}`,
+              },
+              { label: "Forma de Pago", key: "formaPago" },
+              {
+                label: "Detalles",
+                render: (v) =>
+                  (v.detalles || [])
+                    .map(
+                      (d) =>
+                        `Cant: ${
+                          d.cantidad
+                        } | Unit: $${d.precioUnitario?.toLocaleString()}${
+                          d.valorDescuento > 0
+                            ? ` | Desc: ${
+                                d.tipoDescuento === "ValorAbsoluto"
+                                  ? `$${d.valorDescuento?.toLocaleString()}`
+                                  : `${d.valorDescuento}%`
+                              }`
+                            : ""
+                        }${
+                          d.valorIva > 0
+                            ? ` | IVA: $${d.valorIva?.toLocaleString()}`
+                            : ""
+                        }`
+                    )
+                    .join("\n"),
+              },
+            ]}
+          />
+        </div>
+      )}
 
       {ventas.length > 0 && (
         <div className="mt-4">
