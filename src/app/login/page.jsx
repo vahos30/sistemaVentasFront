@@ -6,27 +6,36 @@ import {
   ArrowLeftIcon,
 } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+import { login } from "@/app/services/authService";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [nombreUsuario, setNombreUsuario] = useState("");
+  const [contrasena, setContrasena] = useState("");
   const router = useRouter();
 
   const handleGoHome = () => {
     router.push("/");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (email.trim() === "" || password.trim() === "") {
-      alert("Por favor completa todos los campos.");
+    if (nombreUsuario.trim() === "" || contrasena.trim() === "") {
+      toast.error("Por favor completa todos los campos.");
       return;
     }
 
-    // Redirigir si los campos están llenos
-    router.push("/menuPrincipal");
+    try {
+      const result = await login(nombreUsuario, contrasena);
+      // Puedes guardar el token en localStorage si lo necesitas:
+      localStorage.setItem("token", result.token);
+      toast.success("¡Bienvenido!");
+      router.push("/menuPrincipal");
+    } catch (error) {
+      toast.error(error.message || "Usuario o contraseña incorrectos.");
+    }
   };
 
   return (
@@ -48,12 +57,12 @@ export default function LoginForm() {
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Correo electrónico
+              Nombre de usuario
             </label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={nombreUsuario}
+              onChange={(e) => setNombreUsuario(e.target.value)}
               className="w-full px-4 py-2 mt-1 border rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               required
             />
@@ -66,8 +75,8 @@ export default function LoginForm() {
             <div className="relative mt-1">
               <input
                 type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={contrasena}
+                onChange={(e) => setContrasena(e.target.value)}
                 className="w-full px-4 py-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                 required
               />
