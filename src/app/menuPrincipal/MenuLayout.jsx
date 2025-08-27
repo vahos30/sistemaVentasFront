@@ -2,15 +2,44 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 export default function MenuLayout({ children }) {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     setIsMenuOpen(true);
   }, [pathname]);
+
+  const handleCerrarSesion = () => {
+    toast(
+      ({ closeToast }) => (
+        <div>
+          <div className="mb-2">¿Está seguro de cerrar la sesión?</div>
+          <div className="d-flex justify-content-end gap-2">
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={() => {
+                closeToast();
+                // Aquí puedes limpiar el token si lo usas
+                localStorage.removeItem("token");
+                router.push("/");
+              }}
+            >
+              Sí
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={closeToast}>
+              No
+            </button>
+          </div>
+        </div>
+      ),
+      { autoClose: false }
+    );
+  };
 
   return (
     <div className="d-flex flex-column vh-100">
@@ -125,7 +154,10 @@ export default function MenuLayout({ children }) {
           </ul>
 
           <div className="mt-auto p-3 menu-footer">
-            <button className="btn btn-outline-light w-100">
+            <button
+              className="btn btn-outline-light w-100"
+              onClick={handleCerrarSesion}
+            >
               <i className="bi bi-box-arrow-right me-2"></i>
               Cerrar Sesión
             </button>
