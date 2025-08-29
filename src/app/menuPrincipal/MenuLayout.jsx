@@ -4,15 +4,29 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import { obtenerPerfil } from "@/app/services/usuariosService";
 
 export default function MenuLayout({ children }) {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
+  const [usuario, setUsuario] = useState(null);
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     setIsMenuOpen(true);
   }, [pathname]);
+
+  useEffect(() => {
+    async function cargarPerfil() {
+      try {
+        const perfil = await obtenerPerfil();
+        setUsuario(perfil);
+      } catch (error) {
+        toast.error(error.message || "No se pudo obtener el perfil.");
+      }
+    }
+    cargarPerfil();
+  }, []);
 
   const handleCerrarSesion = () => {
     toast(
@@ -73,12 +87,21 @@ export default function MenuLayout({ children }) {
         >
           <div className="menu-header p-4">
             <div className="d-flex align-items-center mb-3">
-              <div className="user-avatar me-3">
-                <i className="bi bi-person-circle fs-2"></i>
-              </div>
               <div>
-                <h6 className="mb-0 fw-bold">Administrador</h6>
-                <small className="text-light">admin@ventas.com</small>
+                <h6 className="mb-0 fw-bold">
+                  {usuario
+                    ? usuario.roles && usuario.roles[0] === "Administrador"
+                      ? "Administrador"
+                      : "Vendedor"
+                    : "Usuario"}
+                </h6>
+                <small className="text-light">
+                  {usuario ? usuario.userName : ""}
+                </small>
+                <br />
+                <small className="text-light">
+                  {usuario ? usuario.email : ""}
+                </small>
               </div>
             </div>
           </div>
