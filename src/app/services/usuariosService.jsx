@@ -17,3 +17,47 @@ export async function obtenerPerfil() {
 
   return await response.json();
 }
+
+export async function crearVendedor({ userName, email, password }) {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_URL}/crear-vendedor`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      userName,
+      email,
+      password,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    let errorMsg = "No se pudo crear el vendedor.";
+    if (data.errores && Array.isArray(data.errores)) {
+      errorMsg = data.errores.join(" ");
+    }
+    throw new Error(errorMsg);
+  }
+
+  return data.mensaje || "Vendedor creado correctamente";
+}
+
+export async function listarUsuarios() {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_URL}/listar`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudo obtener la lista de usuarios.");
+  }
+
+  return await response.json();
+}
