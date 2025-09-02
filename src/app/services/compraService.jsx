@@ -36,3 +36,36 @@ export const crearCompra = async (compra) => {
     throw error;
   }
 };
+
+export async function anularCompra(id) {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error("No se pudo eliminar la compra.");
+  }
+}
+
+export async function anularCompraParcial(id, detalles) {
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${API_URL}/${id}/anular-parcial`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      compraId: id,
+      detalles,
+    }),
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || "No se pudo anular parcialmente la compra.");
+  }
+}
