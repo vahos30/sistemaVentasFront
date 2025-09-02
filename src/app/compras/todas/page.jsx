@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { obtenerCompras } from "@/app/services/compraService";
+import React, { useEffect, useState, useRef } from "react";
+import {
+  obtenerCompras,
+  anularCompra,
+  anularCompraParcial,
+} from "@/app/services/compraService";
 import BotonVolver from "@/app/components/BotonVolver";
 import { toast } from "react-toastify";
+import ModalAnulacionParcial from "@/app/components/ModalAnulacionParcial";
 
 export default function TodasComprasPage() {
   const [compras, setCompras] = useState([]);
@@ -12,6 +17,7 @@ export default function TodasComprasPage() {
   const [busqueda, setBusqueda] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
+  const [modalCompra, setModalCompra] = useState(null);
 
   useEffect(() => {
     const cargarCompras = async () => {
@@ -61,6 +67,58 @@ export default function TodasComprasPage() {
 
     setFiltradas(resultado);
   }, [busqueda, fechaInicio, fechaFin, compras]);
+
+  const handleAnularCompra = (compra) => {
+    toast(
+      ({ closeToast }) => (
+        <div>
+          <div className="mb-2">
+            ¿Está seguro que desea eliminar la compra definitivamente?
+          </div>
+          <div className="d-flex justify-content-end gap-2">
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={async () => {
+                try {
+                  await anularCompra(compra.id);
+                  toast.success("Compra eliminada correctamente");
+                  setCompras((prev) => prev.filter((c) => c.id !== compra.id));
+                  closeToast();
+                } catch (error) {
+                  toast.error(error.message || "Error al eliminar la compra");
+                  closeToast();
+                }
+              }}
+            >
+              Sí
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={closeToast}>
+              No
+            </button>
+          </div>
+        </div>
+      ),
+      { autoClose: false }
+    );
+  };
+
+  const handleAnularParcial = (compra) => {
+    setModalCompra(compra);
+  };
+
+  const handleConfirmAnulacionParcial = async (detalles) => {
+    try {
+      await anularCompraParcial(modalCompra.id, detalles);
+      toast.success("Compra anulada parcialmente");
+      setModalCompra(null);
+      // Recargar compras
+      const data = await obtenerCompras();
+      setCompras(data);
+      setFiltradas(data);
+    } catch (error) {
+      toast.error(error.message || "Error al anular parcialmente la compra");
+    }
+  };
 
   return (
     <div className="container py-4">
@@ -115,7 +173,9 @@ export default function TodasComprasPage() {
                 <th>Proveedor</th>
                 <th>Fecha</th>
                 <th>Total</th>
+                <th>Estado</th>
                 <th>Detalles</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -127,6 +187,24 @@ export default function TodasComprasPage() {
                     </td>
                     <td>{new Date(compra.fecha).toLocaleString()}</td>
                     <td>${compra.total?.toLocaleString()}</td>
+                    <td>
+                      {compra.estado && compra.estado.trim() !== "" ? (
+                        <span
+                          className={
+                            compra.estado === "Activa"
+                              ? "badge bg-success"
+                              : compra.estado === "Anulada Parcial"
+                              ? "badge bg-danger"
+                              : "badge bg-secondary"
+                          }
+                          style={{ fontSize: "1em" }}
+                        >
+                          {compra.estado}
+                        </span>
+                      ) : (
+                        <span className="text-muted">Sin estado</span>
+                      )}
+                    </td>
                     <td>
                       <ul className="mb-0">
                         {compra.detalles?.map((detalle) => (
@@ -145,11 +223,29 @@ export default function TodasComprasPage() {
                         ))}
                       </ul>
                     </td>
+                    <td>
+                      <div className="d-flex flex-column gap-2 align-items-stretch">
+                        <button
+                          className="btn btn-danger btn-sm rounded-pill fw-semibold"
+                          style={{ minWidth: 120 }}
+                          onClick={() => handleAnularCompra(compra)}
+                        >
+                          Anular Compra
+                        </button>
+                        <button
+                          className="btn btn-outline-warning btn-sm rounded-pill fw-semibold text-dark"
+                          style={{ minWidth: 120 }}
+                          onClick={() => handleAnularParcial(compra)}
+                        >
+                          Anular Parcial
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="text-center text-muted py-4">
+                  <td colSpan={6} className="text-center text-muted py-4">
                     No hay compras registradas.
                   </td>
                 </tr>
@@ -160,6 +256,13 @@ export default function TodasComprasPage() {
             Mostrando {filtradas.length} compras
           </div>
         </div>
+      )}
+      {modalCompra && (
+        <ModalAnulacionParcial
+          compra={modalCompra}
+          onClose={() => setModalCompra(null)}
+          onConfirm={handleConfirmAnulacionParcial}
+        />
       )}
     </div>
   );
