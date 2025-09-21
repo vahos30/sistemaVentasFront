@@ -1,5 +1,5 @@
 const API_URL =
-  "https://sistemainventarioapi20250719110533-dsb7hkfuf3bvhwf7.centralus-01.azurewebsites.net/api/Ciudad/departamentos";
+  "https://sistemainventarioapi20250719110533-dsb7hkfuf3bvhwf7.centralus-01.azurewebsites.net/api/Ciudad";
 //const API_URL = "https://localhost:7062/api/Ciudad";
 
 export async function obtenerDepartamentosYCiudades() {
