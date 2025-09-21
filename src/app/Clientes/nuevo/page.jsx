@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BotonGuardar from "@/app/components/BotonGuardar";
 import BotonVolver from "@/app/components/BotonVolver";
 import {
@@ -8,6 +8,7 @@ import {
   actualizarCliente,
 } from "@/app/services/clienteServices";
 import { obtenerClientePorDocumento } from "@/app/services/clienteServices";
+import { obtenerDepartamentosYCiudades } from "@/app/services/ciudadesService";
 import { toast } from "react-toastify";
 
 export default function CrearClientePage() {
@@ -25,11 +26,47 @@ export default function CrearClientePage() {
   const [clienteExistente, setClienteExistente] = useState(false);
   const [errors, setErrors] = useState({});
 
+  const [departamentos, setDepartamentos] = useState([]);
+  const [ciudadesPorDepto, setCiudadesPorDepto] = useState({});
+  const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState("");
+  const [ciudades, setCiudades] = useState([]);
+  const [ciudadId, setCiudadId] = useState("");
+
+  const [idTipoDocumentoIdentidad, setIdTipoDocumentoIdentidad] = useState("");
+  const [idTipoOrganizacion, setIdTipoOrganizacion] = useState("");
+  const [idTributo, setIdTributo] = useState("");
+  const [razonSocial, setRazonSocial] = useState("");
+
+  const tiposDocumento = [
+    { id: 1, nombre: "Registro civil" },
+    { id: 2, nombre: "Tarjeta de identidad" },
+    { id: 3, nombre: "Cédula de ciudadanía" },
+    { id: 4, nombre: "Tarjeta de extranjería" },
+    { id: 5, nombre: "Cédula de extranjería" },
+    { id: 6, nombre: "NIT" },
+    { id: 7, nombre: "Pasaporte" },
+    { id: 8, nombre: "Documento de identificación extranjero" },
+    { id: 9, nombre: "PEP" },
+    { id: 10, nombre: "NIT otro país" },
+    { id: 11, nombre: "NUIP" },
+  ];
+
+  const tiposOrganizacion = [
+    { id: 1, nombre: "Persona Jurídica" },
+    { id: 2, nombre: "Persona Natural" },
+  ];
+
+  const tributos = [
+    { id: 18, nombre: "IVA" },
+    { id: 21, nombre: "No aplica" },
+  ];
+
   const regex = {
     nombre: /^[a-zA-ZÀ-ÿ\s]+$/,
     apellido: /^[a-zA-ZÀ-ÿ\s]+$/,
-    tipoDocumento:
-      /^(Cédula de Ciudadanía|Cédula de Extranjería|Pasaporte|Nit)$/,
+    tipoDocumento: new RegExp(
+      `^(${tiposDocumento.map((t) => t.nombre).join("|")})$`
+    ),
     NumeroDocumento: /^[a-zA-Z0-9\-]+$/,
     telefono: /^[0-9+\s()-]+$/,
     direccion: /^[a-zA-Z0-9\s.,#\-\/]+$/,
@@ -61,6 +98,7 @@ export default function CrearClientePage() {
     const nuevosErrores = {};
     let primerCampoConError = null;
 
+    // Validar campos de formData
     for (const campo in formData) {
       const valor = formData[campo].trim();
 
@@ -73,12 +111,47 @@ export default function CrearClientePage() {
       }
     }
 
+    // Validar tipo de documento (select)
+    if (!idTipoDocumentoIdentidad) {
+      nuevosErrores.tipoDocumento = "Este campo es obligatorio";
+      if (!primerCampoConError) primerCampoConError = "tipoDocumento";
+    }
+
+    // Validar departamento
+    if (!departamentoSeleccionado) {
+      nuevosErrores.departamento = "Este campo es obligatorio";
+      if (!primerCampoConError) primerCampoConError = "departamento";
+    }
+
+    // Validar ciudad
+    if (!ciudadId) {
+      nuevosErrores.ciudad = "Este campo es obligatorio";
+      if (!primerCampoConError) primerCampoConError = "ciudad";
+    }
+
+    // Validar campos NIT si aplica
+    if (formData.tipoDocumento === "NIT") {
+      if (!idTipoOrganizacion) {
+        nuevosErrores.idTipoOrganizacion = "Este campo es obligatorio";
+        if (!primerCampoConError) primerCampoConError = "idTipoOrganizacion";
+      }
+      if (!idTributo) {
+        nuevosErrores.idTributo = "Este campo es obligatorio";
+        if (!primerCampoConError) primerCampoConError = "idTributo";
+      }
+      if (!razonSocial.trim()) {
+        nuevosErrores.razonSocial = "Este campo es obligatorio";
+        if (!primerCampoConError) primerCampoConError = "razonSocial";
+      }
+    }
+
     setErrors(nuevosErrores);
 
+    // Enfocar el primer campo con error
     if (primerCampoConError) {
-      const input = document.querySelector(
-        `input[name="${primerCampoConError}"]`
-      );
+      const input =
+        document.querySelector(`input[name="${primerCampoConError}"]`) ||
+        document.querySelector(`select[name="${primerCampoConError}"]`);
       if (input) input.focus();
     }
 
@@ -87,21 +160,47 @@ export default function CrearClientePage() {
 
   const handleGuardar = async () => {
     if (!validarCampos()) return;
-
+    if (!ciudadId) {
+      toast.error("Debe seleccionar una ciudad.");
+      return;
+    }
+    if (!idTipoDocumentoIdentidad) {
+      toast.error("Debe seleccionar un tipo de documento.");
+      return;
+    }
     try {
-      if (clienteExistente && clienteId) {
-        const datosActualizados = {
-          ...formData,
-          Id: clienteId,
-        };
+      let datosCliente = {
+        ...formData,
+        ciudadId,
+        idTipoDocumentoIdentidad: Number(idTipoDocumentoIdentidad),
+      };
 
-        await actualizarCliente(clienteId, datosActualizados);
-        toast.success("✅ Cliente actualizado exitosamente");
+      if (formData.tipoDocumento === "NIT") {
+        if (!idTipoOrganizacion || !idTributo || !razonSocial) {
+          toast.error("Debe completar todos los campos de NIT.");
+          return;
+        }
+        datosCliente = {
+          ...datosCliente,
+          idTipoOrganizacion: Number(idTipoOrganizacion),
+          idTributo: Number(idTributo),
+          razonSocial,
+        };
       } else {
-        const nuevoCliente = await CrearClienteNuevo(formData);
-        toast.success("✅ Cliente creado exitosamente");
+        // Si NO es NIT, siempre envía idTributo = 21
+        datosCliente = {
+          ...datosCliente,
+          idTributo: 21,
+        };
       }
 
+      if (clienteExistente && clienteId) {
+        await actualizarCliente(clienteId, { ...datosCliente, Id: clienteId });
+        toast.success("✅ Cliente actualizado exitosamente");
+      } else {
+        await CrearClienteNuevo(datosCliente);
+        toast.success("✅ Cliente creado exitosamente");
+      }
       // Limpiar formulario
       setFormData({
         nombre: "",
@@ -115,6 +214,12 @@ export default function CrearClientePage() {
       setErrors({});
       setClienteExistente(false);
       setClienteId(null);
+      setDepartamentoSeleccionado("");
+      setCiudadId("");
+      setIdTipoDocumentoIdentidad("");
+      setIdTipoOrganizacion("");
+      setIdTributo("");
+      setRazonSocial("");
     } catch (error) {
       toast.error(`❌ ${error.message || "Error al guardar el cliente"}`);
       console.error("Error:", error);
@@ -158,6 +263,50 @@ export default function CrearClientePage() {
     }
   };
 
+  useEffect(() => {
+    // Cargar departamentos y ciudades al montar
+    const cargarCiudades = async () => {
+      try {
+        const data = await obtenerDepartamentosYCiudades();
+        setDepartamentos(Object.keys(data));
+        setCiudadesPorDepto(data);
+      } catch {
+        toast.error("No se pudo cargar la información de ciudades");
+      }
+    };
+    cargarCiudades();
+  }, []);
+
+  // Cuando cambia el departamento, actualiza las ciudades
+  useEffect(() => {
+    if (
+      departamentoSeleccionado &&
+      ciudadesPorDepto[departamentoSeleccionado]
+    ) {
+      setCiudades(ciudadesPorDepto[departamentoSeleccionado]);
+    } else {
+      setCiudades([]);
+    }
+    setCiudadId("");
+  }, [departamentoSeleccionado, ciudadesPorDepto]);
+
+  // Actualiza el handleChange para tipoDocumento
+  const handleTipoDocumentoChange = (e) => {
+    const selectedId = e.target.value;
+    const selectedTipo = tiposDocumento.find(
+      (t) => t.id.toString() === selectedId
+    );
+    setIdTipoDocumentoIdentidad(selectedId);
+    setFormData({
+      ...formData,
+      tipoDocumento: selectedTipo ? selectedTipo.nombre : "",
+    });
+    setErrors({
+      ...errors,
+      tipoDocumento: "",
+    });
+  };
+
   return (
     <div className="container py-5">
       <div className="card shadow mx-auto" style={{ maxWidth: "600px" }}>
@@ -165,7 +314,7 @@ export default function CrearClientePage() {
           <h2 className="card-title mb-4 text-center">Registrar Cliente</h2>
 
           <form onSubmit={(e) => e.preventDefault()}>
-            {/** Nombre */}
+            {/* Nombre */}
             <div className="mb-3">
               <label className="form-label">Nombre:</label>
               <input
@@ -180,7 +329,7 @@ export default function CrearClientePage() {
               )}
             </div>
 
-            {/** Apellido */}
+            {/* Apellido */}
             <div className="mb-3">
               <label className="form-label">Apellido:</label>
               <input
@@ -197,7 +346,7 @@ export default function CrearClientePage() {
               )}
             </div>
 
-            {/** Tipo de Documento */}
+            {/* Tipo de Documento */}
             <div className="mb-3">
               <label className="form-label">Tipo de Documento:</label>
               <select
@@ -205,25 +354,22 @@ export default function CrearClientePage() {
                 className={`form-select ${
                   errors.tipoDocumento ? "is-invalid" : ""
                 }`}
-                value={formData.tipoDocumento}
-                onChange={handleChange}
+                value={idTipoDocumentoIdentidad}
+                onChange={handleTipoDocumentoChange}
               >
                 <option value="">Seleccione un tipo de Documento</option>
-                <option value="Cédula de Ciudadanía">
-                  Cédula de Ciudadanía
-                </option>
-                <option value="Cédula de Extranjería">
-                  Cédula de Extranjería
-                </option>
-                <option value="Pasaporte">Pasaporte</option>
-                <option value="Nit">Nit</option>
+                {tiposDocumento.map((tipo) => (
+                  <option key={tipo.id} value={tipo.id}>
+                    {tipo.nombre}
+                  </option>
+                ))}
               </select>
               {errors.tipoDocumento && (
                 <div className="invalid-feedback">{errors.tipoDocumento}</div>
               )}
             </div>
 
-            {/** Número de Documento */}
+            {/* Número de Documento */}
             <div className="mb-3">
               <label className="form-label">Número de Documento:</label>
               <input
@@ -242,7 +388,75 @@ export default function CrearClientePage() {
               )}
             </div>
 
-            {/** Teléfono */}
+            {/* Campos NIT justo debajo de Número de Documento */}
+            {formData.tipoDocumento === "NIT" && (
+              <>
+                {/* Tipo de Organización */}
+                <div className="mb-3">
+                  <label className="form-label">Tipo de Organización:</label>
+                  <select
+                    className="form-select"
+                    value={idTipoOrganizacion}
+                    onChange={(e) => setIdTipoOrganizacion(e.target.value)}
+                    name="idTipoOrganizacion"
+                  >
+                    <option value="">Seleccione tipo de organización</option>
+                    {tiposOrganizacion.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.idTipoOrganizacion && (
+                    <div className="invalid-feedback d-block">
+                      {errors.idTipoOrganizacion}
+                    </div>
+                  )}
+                </div>
+
+                {/* Tributo */}
+                <div className="mb-3">
+                  <label className="form-label">Tributo:</label>
+                  <select
+                    className="form-select"
+                    value={idTributo}
+                    onChange={(e) => setIdTributo(e.target.value)}
+                    name="idTributo"
+                  >
+                    <option value="">Seleccione tributo</option>
+                    {tributos.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.idTributo && (
+                    <div className="invalid-feedback d-block">
+                      {errors.idTributo}
+                    </div>
+                  )}
+                </div>
+
+                {/* Razón Social */}
+                <div className="mb-3">
+                  <label className="form-label">Razón Social:</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={razonSocial}
+                    onChange={(e) => setRazonSocial(e.target.value)}
+                    name="razonSocial"
+                  />
+                  {errors.razonSocial && (
+                    <div className="invalid-feedback d-block">
+                      {errors.razonSocial}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Teléfono */}
             <div className="mb-3">
               <label className="form-label">Teléfono:</label>
               <input
@@ -259,7 +473,7 @@ export default function CrearClientePage() {
               )}
             </div>
 
-            {/** Dirección */}
+            {/* Dirección */}
             <div className="mb-3">
               <label className="form-label">Dirección:</label>
               <input
@@ -276,7 +490,7 @@ export default function CrearClientePage() {
               )}
             </div>
 
-            {/** Email */}
+            {/* Email */}
             <div className="mb-3">
               <label className="form-label">Email:</label>
               <input
@@ -288,6 +502,51 @@ export default function CrearClientePage() {
               />
               {errors.email && (
                 <div className="invalid-feedback">{errors.email}</div>
+              )}
+            </div>
+
+            {/* Departamento */}
+            <div className="mb-3">
+              <label className="form-label">Departamento:</label>
+              <select
+                className="form-select"
+                value={departamentoSeleccionado}
+                onChange={(e) => setDepartamentoSeleccionado(e.target.value)}
+                name="departamento"
+              >
+                <option value="">Seleccione un departamento</option>
+                {departamentos.map((dep) => (
+                  <option key={dep} value={dep}>
+                    {dep}
+                  </option>
+                ))}
+              </select>
+              {errors.departamento && (
+                <div className="invalid-feedback d-block">
+                  {errors.departamento}
+                </div>
+              )}
+            </div>
+
+            {/* Ciudad */}
+            <div className="mb-3">
+              <label className="form-label">Ciudad:</label>
+              <select
+                className="form-select"
+                value={ciudadId}
+                onChange={(e) => setCiudadId(e.target.value)}
+                disabled={!departamentoSeleccionado}
+                name="ciudad"
+              >
+                <option value="">Seleccione una ciudad</option>
+                {ciudades.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {errors.ciudad && (
+                <div className="invalid-feedback d-block">{errors.ciudad}</div>
               )}
             </div>
 
