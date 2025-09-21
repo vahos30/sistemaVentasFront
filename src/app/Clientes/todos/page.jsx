@@ -5,19 +5,34 @@ import {
   obtenerClientes,
   eliminarCliente,
 } from "@/app/services/clienteServices";
+import { obtenerDepartamentosYCiudades } from "@/app/services/ciudadesService";
 import BotonVolver from "../../components/BotonVolver";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+
+// Mapeos para mostrar nombres en vez de IDs
+const tiposOrganizacion = [
+  { id: 1, nombre: "Persona Jurídica" },
+  { id: 2, nombre: "Persona Natural" },
+];
+
+const tributos = [
+  { id: 18, nombre: "IVA" },
+  { id: 21, nombre: "No aplica" },
+];
 
 export default function TodosClientes() {
   const [clientes, setClientes] = useState([]);
   const [filtrados, setFiltrados] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
+  const [ciudadesPorDepto, setCiudadesPorDepto] = useState({});
+  const [departamentoPorCiudadId, setDepartamentoPorCiudadId] = useState({});
+  const [ciudadPorId, setCiudadPorId] = useState({});
   const router = useRouter();
   const isFirstRun = useRef(true);
-  const TOAST_ID_CLIENTES = "clientes-cargados"; // ✅ ID único para evitar cierres innecesarios
+  const TOAST_ID_CLIENTES = "clientes-cargados";
 
   // Cargar clientes al montar el componente
   useEffect(() => {
@@ -32,7 +47,7 @@ export default function TodosClientes() {
         toast.success("Clientes cargados exitosamente", {
           autoClose: 2000,
           icon: "👥",
-          toastId: TOAST_ID_CLIENTES, // ✅ evita duplicados o cierres accidentales
+          toastId: TOAST_ID_CLIENTES,
         });
       } catch (error) {
         console.error("Error al cargar clientes:", error);
@@ -47,11 +62,36 @@ export default function TodosClientes() {
     cargarClientes();
   }, []);
 
+  // Cargar mapeo de ciudades y departamentos
+  useEffect(() => {
+    const cargarCiudades = async () => {
+      try {
+        const data = await obtenerDepartamentosYCiudades();
+        setCiudadesPorDepto(data);
+
+        // Construir mapeos rápidos
+        const ciudadIdToNombre = {};
+        const ciudadIdToDepto = {};
+        Object.entries(data).forEach(([depto, ciudades]) => {
+          ciudades.forEach((ciudad) => {
+            ciudadIdToNombre[ciudad.id] = ciudad.name;
+            ciudadIdToDepto[ciudad.id] = depto;
+          });
+        });
+        setCiudadPorId(ciudadIdToNombre);
+        setDepartamentoPorCiudadId(ciudadIdToDepto);
+      } catch {
+        // Si falla, no mapea nada
+      }
+    };
+    cargarCiudades();
+  }, []);
+
   // Filtrar clientes cuando cambia la búsqueda
   useEffect(() => {
     if (!busqueda.trim()) {
       setFiltrados(clientes);
-      return; // ✅ ya no se usa toast.dismiss()
+      return;
     }
 
     const termino = busqueda.toLowerCase();
@@ -129,25 +169,14 @@ export default function TodosClientes() {
 
   return (
     <div className="container py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Listado de Clientes</h2>
+      <h2>Listado de Clientes</h2>
+      <div className="d-flex align-items-center mb-4" style={{ gap: "16px" }}>
         <BotonVolver
           href="/Clientes"
           texto="← Volver al Modulo de Clientes"
-          className="btn-sm"
+          className="btn btn-success px-4 py-2"
         />
-      </div>
-
-      <div className="mb-4 text-end">
-        <Link
-          href="/Clientes/nuevo"
-          className="btn btn-primary"
-          onClick={() =>
-            toast.info("Creando nuevo cliente...", {
-              autoClose: 2000,
-            })
-          }
-        >
+        <Link href="/Clientes/nuevo" className="btn btn-primary px-4 py-2">
           + Nuevo Cliente
         </Link>
       </div>
@@ -171,18 +200,26 @@ export default function TodosClientes() {
           <p className="mt-2 text-muted">Cargando clientes...</p>
         </div>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-bordered table-hover shadow">
+        <div
+          className="table-responsive"
+          style={{ maxHeight: "70vh", overflowX: "auto", paddingRight: "24px" }}
+        >
+          <table className="table table-bordered table-hover table-sm text-nowrap small shadow">
             <thead className="table-dark">
               <tr>
                 <th>Nombre</th>
                 <th>Apellido</th>
-                <th>Tipo Documento</th>
-                <th>N° Documento</th>
+                <th>Tipo Doc.</th>
+                <th>N° Doc.</th>
+                <th>Razón Social</th>
+                <th>Tipo Org.</th>
+                <th>Tributo</th>
                 <th>Teléfono</th>
                 <th>Dirección</th>
                 <th>Email</th>
-                <th>Acciones</th>
+                <th>Depto.</th>
+                <th>Ciudad</th>
+                <th style={{ minWidth: "170px" }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -193,25 +230,40 @@ export default function TodosClientes() {
                     <td>{cliente.apellido}</td>
                     <td>{cliente.tipoDocumento}</td>
                     <td>{cliente.numeroDocumento}</td>
+                    <td>{cliente.razonSocial ?? ""}</td>
+                    <td>
+                      {tiposOrganizacion.find(
+                        (org) => org.id === cliente.idTipoOrganizacion
+                      )?.nombre || ""}
+                    </td>
+                    <td>
+                      {tributos.find((t) => t.id === cliente.idTributo)
+                        ?.nombre || ""}
+                    </td>
                     <td>{cliente.telefono}</td>
                     <td>{cliente.direccion}</td>
                     <td>{cliente.email}</td>
                     <td>
-                      <div className="d-flex gap-1">
+                      {departamentoPorCiudadId[cliente.ciudadId] ||
+                        cliente.departamento ||
+                        ""}
+                    </td>
+                    <td>
+                      {ciudadPorId[cliente.ciudadId] || cliente.ciudad || ""}
+                    </td>
+                    <td style={{ whiteSpace: "nowrap", minWidth: "170px" }}>
+                      <div className="d-flex justify-content-center align-items-center gap-2">
                         <Link
                           href={`/Clientes/editar/${cliente.id}`}
                           className="btn btn-sm btn-warning"
-                          onClick={() =>
-                            toast.info("Editando cliente...", {
-                              autoClose: 2000,
-                            })
-                          }
+                          style={{ minWidth: "80px" }}
                         >
                           Editar
                         </Link>
                         <button
                           onClick={() => confirmarEliminacion(cliente.id)}
                           className="btn btn-sm btn-danger"
+                          style={{ minWidth: "80px" }}
                         >
                           Eliminar
                         </button>
@@ -221,7 +273,7 @@ export default function TodosClientes() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="text-center text-muted py-4">
+                  <td colSpan={13} className="text-center text-muted py-4">
                     {busqueda
                       ? `No se encontraron clientes para "${busqueda}"`
                       : "No hay clientes registrados"}
@@ -230,10 +282,6 @@ export default function TodosClientes() {
               )}
             </tbody>
           </table>
-
-          <div className="text-end text-muted small mt-2">
-            Mostrando {filtrados.length} de {clientes.length} clientes
-          </div>
         </div>
       )}
     </div>

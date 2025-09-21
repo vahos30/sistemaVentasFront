@@ -32,6 +32,17 @@ export default function ModuloFacturas() {
             >
               Crear una nueva Factura
             </Link>
+            <Link
+              href="/ventas/facturas/legal"
+              className="btn btn-success btn-lg"
+              style={{
+                fontWeight: "bold",
+                letterSpacing: "1px",
+                fontFamily: "inherit",
+              }}
+            >
+              Crear Factura Legal
+            </Link>
           </div>
           <div className="mt-4 text-end">
             <BotonVolver
