@@ -12,6 +12,7 @@ import BotonVolver from "@/app/components/BotonVolver";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import jsPDF from "jspdf";
+import { descargarFacturaPDF } from "@/app/services/factusService";
 
 export default function TodasFacturas() {
   const [facturas, setFacturas] = useState([]);
@@ -467,6 +468,22 @@ export default function TodasFacturas() {
     setModalNotaCredito({ abierto: true, nota, cliente });
   }
 
+  async function handleDescargarPDF(numeroFactura) {
+    try {
+      const blob = await descargarFacturaPDF(numeroFactura);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Factura_${numeroFactura}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error("Error al descargar el PDF.");
+    }
+  }
+
   return (
     <div className="container py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -504,145 +521,139 @@ export default function TodasFacturas() {
                 <th>Cliente</th>
                 <th>Documento</th>
                 <th>Fecha</th>
-                <th>Total</th>
                 <th>Detalles de la Factura</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filtradas.length > 0 ? (
-                filtradas.map((factura) => {
-                  const cliente = clientes.find(
-                    (c) => c.id === factura.clienteId
-                  );
-                  const documento = cliente
-                    ? `${cliente.tipoDocumento} ${cliente.numeroDocumento}`
-                    : "";
-                  const aplicaIva = factura.detalles.some(
-                    (d) => d.valorIva > 0
-                  );
-                  const total = factura.detalles.reduce(
-                    (sum, d) => sum + d.subtotal,
-                    0
-                  );
-
-                  return (
-                    <tr key={factura.id}>
-                      <td>{factura.numeroFactura}</td>
-                      <td>{getNombreCliente(factura.clienteId)}</td>
-                      <td>{documento}</td>
-                      <td>{new Date(factura.fecha).toLocaleString()}</td>
-                      <td>${total.toLocaleString()}</td>
-                      <td>
-                        <div>
-                          <div
-                            className="fw-semibold mb-1 text-primary"
-                            style={{ fontSize: "0.98rem" }}
-                          >
-                            Detalles de la factura
-                          </div>
-                          <div className="table-responsive">
-                            <table className="table tabla-detalle-recibo mb-0">
-                              <thead>
-                                <tr>
-                                  <th>Cantidad</th>
-                                  <th>Producto</th>
-                                  <th>Precio Unitario</th>
-                                  <th>Descuento</th>
-                                  <th>Subtotal</th>
+                filtradas.map((factura) => (
+                  <tr key={factura.id}>
+                    <td>{factura.numeroFactura}</td>
+                    <td>{getNombreCliente(factura.clienteId)}</td>
+                    <td>
+                      {(() => {
+                        const cliente = clientes.find(
+                          (c) => c.id === factura.clienteId
+                        );
+                        return cliente
+                          ? `${cliente.tipoDocumento} ${cliente.numeroDocumento}`
+                          : "";
+                      })()}
+                    </td>
+                    <td>{new Date(factura.fecha).toLocaleString()}</td>
+                    <td>
+                      <div>
+                        <div
+                          className="fw-semibold mb-1 text-primary"
+                          style={{ fontSize: "0.98rem" }}
+                        >
+                          Detalles de la factura
+                        </div>
+                        <div className="table-responsive">
+                          <table className="table tabla-detalle-recibo mb-0">
+                            <thead>
+                              <tr>
+                                <th>Cantidad</th>
+                                <th>Producto</th>
+                                <th>Precio Unitario</th>
+                                <th>Descuento</th>
+                                <th>Subtotal</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {factura.detalles.map((det) => (
+                                <tr key={det.id || det.productoId}>
+                                  <td>{det.cantidad}</td>
+                                  <td>{getNombreProducto(det.productoId)}</td>
+                                  <td>
+                                    ${det.precioUnitario?.toLocaleString() || 0}
+                                  </td>
+                                  <td>
+                                    {det.tipoDescuento === "ValorAbsoluto"
+                                      ? `$${
+                                          det.valorDescuento?.toLocaleString() ||
+                                          0
+                                        }`
+                                      : `${det.valorDescuento || 0}%`}
+                                  </td>
+                                  <td>
+                                    ${det.subtotal?.toLocaleString() || 0}
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {factura.detalles.map((det) => (
-                                  <tr key={det.id || det.productoId}>
-                                    <td>{det.cantidad}</td>
-                                    <td>{getNombreProducto(det.productoId)}</td>
-                                    <td>
-                                      $
-                                      {det.precioUnitario?.toLocaleString() ||
-                                        0}
-                                    </td>
-                                    <td>
-                                      {det.tipoDescuento === "ValorAbsoluto"
-                                        ? `$${
-                                            det.valorDescuento?.toLocaleString() ||
-                                            0
-                                          }`
-                                        : `${det.valorDescuento || 0}%`}
-                                    </td>
-                                    <td>
-                                      ${det.subtotal?.toLocaleString() || 0}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="mt-2">
+                          <button
+                            className="btn btn-outline-primary btn-sm"
+                            onClick={() =>
+                              handleDescargarPDF(factura.numeroFactura)
+                            }
+                          >
+                            Descargar PDF
+                          </button>
+                        </div>
+                        <div className="mt-2 text-end">
+                          {estaAnulada(factura.numeroFactura) && (
+                            <div>
+                              <span className="text-danger fw-bold">
+                                FACTURA ANULADA
+                              </span>
+                            </div>
+                          )}
+                          <div>
+                            <strong>Subtotal sin IVA:</strong> $
+                            {factura.detalles
+                              .reduce(
+                                (acc, d) =>
+                                  acc + (d.subtotal - (d.valorIva || 0)),
+                                0
+                              )
+                              .toLocaleString(undefined, {
+                                maximumFractionDigits: 2,
+                              })}
                           </div>
-                          <div className="mt-2">
-                            <button
-                              className="btn btn-outline-primary btn-sm"
-                              onClick={() => descargarPDF(factura)}
-                            >
-                              Descargar PDF
-                            </button>
+                          <div>
+                            <strong>IVA (19%):</strong> $
+                            {factura.detalles
+                              .reduce((acc, d) => acc + (d.valorIva || 0), 0)
+                              .toLocaleString(undefined, {
+                                maximumFractionDigits: 2,
+                              })}
                           </div>
-                          <div className="mt-2 text-end">
-                            {estaAnulada(factura.numeroFactura) && (
-                              <div>
-                                <span className="text-danger fw-bold">
-                                  FACTURA ANULADA
-                                </span>
-                              </div>
-                            )}
-                            <div>
-                              <strong>Subtotal sin IVA:</strong> $
-                              {factura.detalles
-                                .reduce(
-                                  (acc, d) =>
-                                    acc + (d.subtotal - (d.valorIva || 0)),
-                                  0
-                                )
-                                .toLocaleString(undefined, {
-                                  maximumFractionDigits: 2,
-                                })}
-                            </div>
-                            <div>
-                              <strong>IVA (19%):</strong> $
-                              {factura.detalles
-                                .reduce((acc, d) => acc + (d.valorIva || 0), 0)
-                                .toLocaleString(undefined, {
-                                  maximumFractionDigits: 2,
-                                })}
-                            </div>
-                            <div>
-                              <strong>Total:</strong> ${total.toLocaleString()}
-                            </div>
+                          <div>
+                            <strong>Total:</strong> $
+                            {factura.detalles
+                              .reduce((sum, d) => sum + d.subtotal, 0)
+                              .toLocaleString()}
                           </div>
                         </div>
-                      </td>
-                      <td>
-                        {estaAnulada(factura.numeroFactura) ? (
-                          <button
-                            className="btn btn-info btn-sm"
-                            onClick={() => verNotaCredito(factura)}
-                          >
-                            Ver Nota Crédito
-                          </button>
-                        ) : (
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => confirmarAnulacion(factura)}
-                          >
-                            Anular Factura
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
+                      </div>
+                    </td>
+                    <td style={{ verticalAlign: "middle" }}>
+                      {estaAnulada(factura.numeroFactura) ? (
+                        <button
+                          className="btn btn-info btn-sm"
+                          onClick={() => verNotaCredito(factura)}
+                        >
+                          Ver Nota Crédito
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => confirmarAnulacion(factura)}
+                        >
+                          Anular Factura
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="text-center text-muted py-4">
+                  <td colSpan={6} className="text-center text-muted py-4">
                     {busqueda
                       ? `No se encontraron facturas para "${busqueda}"`
                       : "No hay facturas registradas"}
