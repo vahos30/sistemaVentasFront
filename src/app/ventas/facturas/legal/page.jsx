@@ -3,12 +3,28 @@
 import React, { useState, useEffect, useRef } from "react";
 import { obtenerClientes } from "@/app/services/clienteServices";
 import { obtenerProductos } from "@/app/services/productosService";
-import { obtenerTokenFactus } from "@/app/services/factusService";
-import { toast } from "react-toastify";
+import {
+  crearFacturaLegal,
+  descargarFacturaPDF,
+} from "@/app/services/factusService";
 import BotonBuscar from "@/app/components/BotonBuscar";
 import BotonAgregar from "@/app/components/BotonAgregar";
 import BotonCrear from "@/app/components/BotonCrear";
 import BotonVolver from "@/app/components/BotonVolver";
+import { toast } from "react-toastify";
+
+const FORMAS_PAGO = [
+  { codigo: "1", nombre: "Pago de contado" },
+  { codigo: "2", nombre: "Pago a crédito" },
+];
+
+const METODOS_PAGO = [
+  { codigo: "10", nombre: "Efectivo" },
+  { codigo: "42", nombre: "Consignación" },
+  { codigo: "47", nombre: "Transferencia" },
+  { codigo: "49", nombre: "Tarjeta Débito" },
+  { codigo: "48", nombre: "Tarjeta Crédito" },
+];
 
 export default function CrearFacturaLegalPage() {
   // Cliente
@@ -21,11 +37,20 @@ export default function CrearFacturaLegalPage() {
   const [busquedaProducto, setBusquedaProducto] = useState("");
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [cantidad, setCantidad] = useState(1);
-  const [productosFactura, setProductosFactura] = useState([]);
+  const [descuentoTipo, setDescuentoTipo] = useState("");
+  const [descuentoValor, setDescuentoValor] = useState(0);
 
-  // Factura legal
+  const [productosFactura, setProductosFactura] = useState([]);
+  const [facturaCreada, setFacturaCreada] = useState(null);
   const [creando, setCreando] = useState(false);
-  const [facturaLegal, setFacturaLegal] = useState(null);
+
+  // Forma y método de pago
+  const [formaPago, setFormaPago] = useState("");
+  const [metodoPago, setMetodoPago] = useState("");
+  const [observacion, setObservacion] = useState("");
+
+  // Errores
+  const [errores, setErrores] = useState({});
 
   // Cargar productos disponibles
   useEffect(() => {
@@ -77,6 +102,8 @@ export default function CrearFacturaLegalPage() {
   const handleSeleccionarProducto = (producto) => {
     setProductoSeleccionado(producto);
     setCantidad(1);
+    setDescuentoTipo("");
+    setDescuentoValor(0);
   };
 
   // Agregar producto a la factura
@@ -86,16 +113,37 @@ export default function CrearFacturaLegalPage() {
       toast.error("Cantidad inválida, verifique la cantidad en stock.");
       return;
     }
+    if (
+      descuentoTipo === "porcentaje" &&
+      (descuentoValor < 0 || descuentoValor > 100)
+    ) {
+      toast.error("El descuento en porcentaje debe estar entre 0 y 100.");
+      return;
+    }
+    if (descuentoTipo === "valor" && descuentoValor < 0) {
+      toast.error("El descuento en valor no puede ser negativo.");
+      return;
+    }
     setProductosFactura((prev) => [
       ...prev,
       {
         ...productoSeleccionado,
         cantidad,
+        precioUnitario: productoSeleccionado.precio,
+        tipoDescuento:
+          descuentoTipo === ""
+            ? ""
+            : descuentoTipo === "porcentaje"
+            ? "Porcentaje"
+            : "ValorAbsoluto",
+        valorDescuento: descuentoValor,
       },
     ]);
     setProductoSeleccionado(null);
     setBusquedaProducto("");
     setCantidad(1);
+    setDescuentoTipo("");
+    setDescuentoValor(0);
   };
 
   // Eliminar producto de la lista
@@ -103,97 +151,88 @@ export default function CrearFacturaLegalPage() {
     setProductosFactura((prev) => prev.filter((p) => p.id !== id));
   };
 
-  // Mapear datos al formato de Factus
-  function mapearFacturaFactus(cliente, productos) {
-    return {
-      numbering_range_id: 8, // Debes ajustar según tu configuración en Factus
-      reference_code: "I3",
-      observation: "",
-      payment_form: "1",
-      payment_due_date: "2024-12-30",
-      payment_method_code: "10",
-      operation_type: 10,
-      send_email: false,
-      order_reference: { reference_code: "ref-001", issue_date: "" },
-      billing_period: {
-        start_date: "2024-01-10",
-        start_time: "00:00:00",
-        end_date: "2024-02-09",
-        end_time: "23:59:59",
-      },
-      establishment: {
-        name: "Factus pro",
-        address: "cra 01 # 223 - 22",
-        phone_number: "123456789",
-        email: "fatuspro@factus.co",
-        municipality_id: "980",
-      },
-      customer: {
-        identification: cliente.numeroDocumento,
-        dv: "3",
-        company: "",
-        trade_name: "",
-        names: `${cliente.nombre} ${cliente.apellido || ""}`,
-        address: cliente.direccion,
-        email: cliente.email,
-        phone: cliente.telefono,
-        legal_organization_id: "2",
-        tribute_id: "21",
-        identification_document_id: "3",
-        municipality_id: "980",
-      },
-      items: productos.map((p) => ({
-        scheme_id: "1",
-        note: "",
-        code_reference: p.referencia,
-        name: p.nombre,
-        quantity: p.cantidad,
-        discount_rate: 0,
-        price: p.precio,
-        tax_rate: "19.00",
-        unit_measure_id: 70,
-        standard_code_id: 1,
-        is_excluded: 0,
-        tribute_id: 1,
-        withholding_taxes: [],
-      })),
-    };
-  }
-
-  // Crear factura legal en Factus
+  // Crear factura legal en la API
   const handleCrearFacturaLegal = async () => {
+    const nuevosErrores = {};
+
     if (!cliente || productosFactura.length === 0) {
       toast.error("Debe seleccionar un cliente y al menos un producto.");
       return;
     }
+    if (!formaPago) {
+      nuevosErrores.formaPago = "Debe seleccionar la forma de pago.";
+    }
+    if (!metodoPago) {
+      nuevosErrores.metodoPago = "Debe seleccionar el método de pago.";
+    }
+
+    setErrores(nuevosErrores);
+
+    if (Object.keys(nuevosErrores).length > 0) {
+      // Enfoca el primer select con error
+      if (nuevosErrores.formaPago) {
+        document.querySelector('select[name="formaPago"]').focus();
+      } else if (nuevosErrores.metodoPago) {
+        document.querySelector('select[name="metodoPago"]').focus();
+      }
+      return;
+    }
+
     setCreando(true);
     try {
-      // 1. Obtener el token de Factus
-      const { access_token } = await obtenerTokenFactus();
+      const detalles = productosFactura.map((p) => ({
+        productoId: p.id,
+        cantidad: p.cantidad,
+        precioUnitario: p.precio,
+        tipoDescuento: p.tipoDescuento,
+        valorDescuento: p.valorDescuento,
+      }));
 
-      // 2. Mapear los datos
-      const facturaFactus = mapearFacturaFactus(cliente, productosFactura);
+      const facturaLegal = {
+        clienteId: cliente.id,
+        detalles,
+        referencia: "",
+        observacion,
+        fechaVencimiento: "",
+        formaPago,
+        metodoPago,
+      };
 
-      // 3. Consumir el endpoint de Factus
-      const response = await fetch(
-        "https://api-sandbox.factus.com.co/facturas",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${access_token}`,
-          },
-          body: JSON.stringify(facturaFactus),
-        }
-      );
-      if (!response.ok) throw new Error("No se pudo crear la factura legal");
-      const data = await response.json();
-      setFacturaLegal(data);
-      toast.success("Factura legal creada correctamente");
+      const data = await crearFacturaLegal(facturaLegal);
+      setFacturaCreada({
+        factus: data.data, // respuesta de Factus
+        cliente, // datos completos del cliente
+        formaPago, // código de forma de pago
+        metodoPago, // código de método de pago
+        observacion, // observación
+      });
+      toast.success("Factura legal creada exitosamente");
     } catch (error) {
       toast.error(error.message || "Error al crear la factura legal");
+      console.error("Error al crear la factura legal:", error);
     } finally {
       setCreando(false);
+    }
+  };
+
+  const handleDescargarPDF = async () => {
+    try {
+      const numeroFactura = facturaCreada.factus.bill?.number;
+      if (!numeroFactura) {
+        toast.error("No se encontró el número de factura.");
+        return;
+      }
+      const blob = await descargarFacturaPDF(numeroFactura);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Factura_${numeroFactura}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error("Error al descargar el PDF.");
     }
   };
 
@@ -201,7 +240,7 @@ export default function CrearFacturaLegalPage() {
     <div className="container py-5">
       <div className="card shadow mx-auto" style={{ maxWidth: 700 }}>
         <div className="card-body">
-          <h2 className="card-title mb-4 text-center text-success">
+          <h2 className="card-title mb-4 text-center text-primary">
             Crear Factura Legal
           </h2>
           <form onSubmit={(e) => e.preventDefault()}>
@@ -294,9 +333,9 @@ export default function CrearFacturaLegalPage() {
 
                 {/* Mostrar datos del producto seleccionado */}
                 {productoSeleccionado && (
-                  <div className="card mb-3 border-success">
+                  <div className="card mb-3 border-primary">
                     <div className="card-body">
-                      <h5 className="card-title text-success">
+                      <h5 className="card-title text-primary">
                         {productoSeleccionado.nombre}
                       </h5>
                       <div>
@@ -322,6 +361,40 @@ export default function CrearFacturaLegalPage() {
                           className="form-control"
                           style={{ width: 80 }}
                         />
+                        <label className="ms-3 me-2 mb-0">Descuento:</label>
+                        <select
+                          className="form-select"
+                          style={{ width: 180, minWidth: 150 }}
+                          value={descuentoTipo}
+                          onChange={(e) => setDescuentoTipo(e.target.value)}
+                        >
+                          <option value="">Sin descuento</option>
+                          <option value="porcentaje">Porcentaje (%)</option>
+                          <option value="valor">Valor ($)</option>
+                        </select>
+                        <input
+                          type="number"
+                          min={0}
+                          max={
+                            descuentoTipo === "porcentaje"
+                              ? 100
+                              : productoSeleccionado.precio * cantidad
+                          }
+                          value={descuentoValor}
+                          onChange={(e) =>
+                            setDescuentoValor(Number(e.target.value))
+                          }
+                          className="form-control"
+                          style={{ width: 100, minWidth: 80 }}
+                          placeholder={
+                            descuentoTipo === "porcentaje"
+                              ? "%"
+                              : descuentoTipo === "valor"
+                              ? "$"
+                              : ""
+                          }
+                          disabled={descuentoTipo === ""}
+                        />
                         <BotonAgregar
                           onClick={handleAgregarProducto}
                           texto="Agregar a la factura"
@@ -332,79 +405,244 @@ export default function CrearFacturaLegalPage() {
                   </div>
                 )}
 
-                {/* Tabla de productos agregados */}
                 {productosFactura.length > 0 && (
-                  <div className="mt-4">
-                    <h5 className="mb-3 text-success">
-                      Productos en la factura
-                    </h5>
-                    <div style={{ maxWidth: "100%", overflowX: "auto" }}>
-                      <table
-                        className="table tabla-detalle-recibo mb-0"
-                        style={{ minWidth: 800 }}
-                      >
-                        <thead>
-                          <tr>
-                            <th>Cantidad</th>
-                            <th>Producto</th>
-                            <th>Referencia</th>
-                            <th>Precio Unitario</th>
-                            <th>Descripción</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {productosFactura.map((p) => (
-                            <tr key={p.id}>
-                              <td>{p.cantidad}</td>
-                              <td>{p.nombre}</td>
-                              <td>{p.referencia}</td>
-                              <td>${p.precio.toLocaleString()}</td>
-                              <td>{p.descripcion}</td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className="btn btn-danger btn-sm"
-                                  onClick={() => handleEliminarProducto(p.id)}
-                                >
-                                  Quitar
-                                </button>
-                              </td>
+                  <>
+                    {/* Tabla de productos agregados */}
+                    <div className="mt-4">
+                      <h5 className="mb-3 text-success">
+                        Productos en la factura
+                      </h5>
+                      <div style={{ maxWidth: "100%", overflowX: "auto" }}>
+                        <table
+                          className="table tabla-detalle-recibo mb-0"
+                          style={{ minWidth: 900 }}
+                        >
+                          <thead>
+                            <tr>
+                              <th>Cantidad</th>
+                              <th>Producto</th>
+                              <th>Referencia</th>
+                              <th>Descripción</th>
+                              <th>Precio Unitario</th>
+                              <th>Descuento</th>
+                              <th></th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {productosFactura.map((p) => (
+                              <tr key={p.id}>
+                                <td>{p.cantidad}</td>
+                                <td>{p.nombre}</td>
+                                <td>{p.referencia}</td>
+                                <td>{p.descripcion}</td>
+                                <td>${p.precio.toLocaleString()}</td>
+                                <td>
+                                  {p.tipoDescuento === ""
+                                    ? "Sin descuento"
+                                    : p.tipoDescuento === "Porcentaje"
+                                    ? `${p.valorDescuento}%`
+                                    : `$${p.valorDescuento}`}
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="btn btn-danger btn-sm"
+                                    onClick={() => handleEliminarProducto(p.id)}
+                                  >
+                                    Quitar
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                {/* Botón para crear factura legal */}
-                {productosFactura.length > 0 && (
-                  <div className="text-end mt-3">
-                    <BotonCrear
-                      onClick={handleCrearFacturaLegal}
-                      texto={creando ? "Creando..." : "Crear Factura Legal"}
-                      disabled={creando}
-                    />
-                  </div>
+                    {/* Observación */}
+                    <div className="mb-3 mt-4">
+                      <label className="form-label">Observación:</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={observacion}
+                        onChange={(e) => setObservacion(e.target.value)}
+                        placeholder="Observación para la factura"
+                      />
+                    </div>
+
+                    {/* Forma de pago y método de pago */}
+                    <div className="row mb-4">
+                      <div className="col-md-6">
+                        <label className="form-label">Forma de Pago:</label>
+                        <select
+                          className={`form-select ${
+                            errores.formaPago ? "is-invalid" : ""
+                          }`}
+                          value={formaPago}
+                          onChange={(e) => setFormaPago(e.target.value)}
+                          name="formaPago"
+                        >
+                          <option value="">Seleccione</option>
+                          {FORMAS_PAGO.map((fp) => (
+                            <option key={fp.codigo} value={fp.codigo}>
+                              {fp.nombre}
+                            </option>
+                          ))}
+                        </select>
+                        {errores.formaPago && (
+                          <div className="invalid-feedback d-block">
+                            {errores.formaPago}
+                          </div>
+                        )}
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Método de Pago:</label>
+                        <select
+                          className={`form-select ${
+                            errores.metodoPago ? "is-invalid" : ""
+                          }`}
+                          value={metodoPago}
+                          onChange={(e) => setMetodoPago(e.target.value)}
+                          name="metodoPago"
+                        >
+                          <option value="">Seleccione</option>
+                          {METODOS_PAGO.map((mp) => (
+                            <option key={mp.codigo} value={mp.codigo}>
+                              {mp.nombre}
+                            </option>
+                          ))}
+                        </select>
+                        {errores.metodoPago && (
+                          <div className="invalid-feedback d-block">
+                            {errores.metodoPago}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Botón para crear factura legal */}
+                    <div className="text-end mt-3">
+                      <BotonCrear
+                        onClick={handleCrearFacturaLegal}
+                        texto={creando ? "Creando..." : "Crear Factura Legal"}
+                        disabled={creando}
+                      />
+                    </div>
+                  </>
                 )}
               </>
             )}
           </form>
 
           {/* Mostrar factura legal creada */}
-          {facturaLegal && (
+          {facturaCreada && (
             <div className="mt-5">
               <div className="card border-success">
                 <div className="card-body">
                   <h4 className="text-success mb-3">
                     Factura legal creada exitosamente
                   </h4>
-                  <pre
-                    style={{ fontSize: 13, background: "#f8f9fa", padding: 12 }}
-                  >
-                    {JSON.stringify(facturaLegal, null, 2)}
-                  </pre>
+                  <div>
+                    <strong>Número de factura:</strong>{" "}
+                    {facturaCreada.factus.bill?.number}
+                  </div>
+                  <div>
+                    <strong>Referencia:</strong>{" "}
+                    {facturaCreada.factus.bill?.reference_code}
+                  </div>
+                  <div>
+                    <strong>Cliente:</strong> {facturaCreada.cliente.nombre}{" "}
+                    {facturaCreada.cliente.apellido}
+                  </div>
+                  <div>
+                    <strong>Tipo de Documento:</strong>{" "}
+                    {facturaCreada.cliente.tipoDocumento}
+                  </div>
+                  <div>
+                    <strong>Número de Documento:</strong>{" "}
+                    {facturaCreada.cliente.numeroDocumento}
+                  </div>
+                  <div>
+                    <strong>Dirección:</strong>{" "}
+                    {facturaCreada.cliente.direccion}
+                  </div>
+                  <div>
+                    <strong>Ciudad:</strong> {facturaCreada.cliente.ciudad}
+                  </div>
+                  <div>
+                    <strong>Teléfono:</strong> {facturaCreada.cliente.telefono}
+                  </div>
+                  <div>
+                    <strong>Email:</strong> {facturaCreada.cliente.email}
+                  </div>
+                  {facturaCreada.cliente.razonSocial && (
+                    <div>
+                      <strong>Razón Social:</strong>{" "}
+                      {facturaCreada.cliente.razonSocial}
+                    </div>
+                  )}
+                  <div>
+                    <strong>Forma de Pago:</strong>{" "}
+                    {
+                      FORMAS_PAGO.find(
+                        (fp) => fp.codigo === facturaCreada.formaPago
+                      )?.nombre
+                    }
+                  </div>
+                  <div>
+                    <strong>Método de Pago:</strong>{" "}
+                    {
+                      METODOS_PAGO.find(
+                        (mp) => mp.codigo === facturaCreada.metodoPago
+                      )?.nombre
+                    }
+                  </div>
+                  <div>
+                    <strong>Observación:</strong> {facturaCreada.observacion}
+                  </div>
+                  <div>
+                    <strong>Total:</strong> ${facturaCreada.factus.bill?.total}
+                  </div>
+                  <div>
+                    <strong>IVA:</strong> $
+                    {facturaCreada.factus.bill?.tax_amount}
+                  </div>
+                  <div className="mt-3 table-responsive">
+                    <table className="table table-bordered align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th>Producto</th>
+                          <th>Cantidad</th>
+                          <th>Precio Unitario</th>
+                          <th>IVA</th>
+                          <th>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.isArray(facturaCreada.factus?.items) &&
+                          facturaCreada.factus.items.map((item, idx) => (
+                            <tr key={idx}>
+                              <td>{item.name}</td>
+                              <td>{item.quantity}</td>
+                              <td>${item.price}</td>
+                              <td>{item.tax_rate}%</td>
+                              <td>${item.total}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {facturaCreada.factus.bill?.number && (
+                    <div className="mt-3">
+                      <button
+                        className="btn btn-outline-success"
+                        onClick={handleDescargarPDF}
+                      >
+                        Descargar PDF
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
