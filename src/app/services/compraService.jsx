@@ -1,5 +1,5 @@
 const API_URL =
-  "sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Compra";
+  "https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Compra";
 //const API_URL = "https://localhost:7062/api/Compra";
 
 export const obtenerCompras = async () => {

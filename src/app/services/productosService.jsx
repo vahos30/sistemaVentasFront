@@ -1,5 +1,5 @@
 const BASE_URL =
-  "sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Productos";
+  "https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Productos";
 
 //const BASE_URL = "https://localhost:7062/api/Productos";
 
