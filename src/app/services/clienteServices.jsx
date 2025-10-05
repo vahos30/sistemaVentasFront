@@ -1,6 +1,8 @@
 // src/services/clienteService.jsAdd commentMore actions
 const API_URL =
-  "https://sistemainventarioapi20250719110533-dsb7hkfuf3bvhwf7.centralus-01.azurewebsites.net/api/Clientes";
+  "sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Clientes";
+
+//const API_URL = "https://localhost:7062/api/Clientes";
 
 //Metodo para obtener todos los clientes
 export const obtenerClientes = async () => {
