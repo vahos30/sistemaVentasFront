@@ -1,6 +1,6 @@
 //const API_URL = "https://localhost:7062/api/Auth";
 const API_URL =
-  "https://sistemainventarioapi20250719110533-dsb7hkfuf3bvhwf7.centralus-01.azurewebsites.net/api/Auth";
+  "sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Auth";
 
 export async function login(nombreUsuario, contrasena) {
   const response = await fetch(`${API_URL}/login`, {

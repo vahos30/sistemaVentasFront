@@ -1,5 +1,5 @@
 const BASE_URL =
-  "https://sistemainventarioapi20250719110533-dsb7hkfuf3bvhwf7.centralus-01.azurewebsites.net/api/Recibos";
+  "sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Recibos";
 
 //const BASE_URL = "https://localhost:7062/api/Recibos";
 
