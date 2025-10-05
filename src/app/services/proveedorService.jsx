@@ -1,5 +1,5 @@
 const API_URL =
-  "sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Proveedor"; // URL de la API EN AZURE
+  "https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Proveedor"; // URL de la API EN AZURE
 
 //const API_URL = "https://localhost:7062/api/Proveedor";
 
