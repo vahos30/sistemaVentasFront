@@ -22,17 +22,6 @@ export default function ModuloFacturas() {
               Ver todas las Facturas
             </Link>
             <Link
-              href="/ventas/facturas/nueva"
-              className="btn btn-warning btn-lg text-white"
-              style={{
-                fontWeight: "bold",
-                letterSpacing: "1px",
-                fontFamily: "inherit",
-              }}
-            >
-              Crear una nueva Factura
-            </Link>
-            <Link
               href="/ventas/facturas/legal"
               className="btn btn-success btn-lg"
               style={{
@@ -41,7 +30,7 @@ export default function ModuloFacturas() {
                 fontFamily: "inherit",
               }}
             >
-              Crear Factura Legal
+              Crear Nueva Factura Legal
             </Link>
           </div>
           <div className="mt-4 text-end">
