@@ -53,3 +53,21 @@ export async function descargarFacturaPDF(numeroFactura) {
   const blob = await response.blob();
   return blob;
 }
+
+export async function crearNotaCreditoFactus(data) {
+  const response = await fetch(`${BASE_URL}/crear-nota-credito-factus`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error("Error al crear la nota crédito");
+  return await response.json();
+}
+
+export async function descargarNotaCreditoPDF(numeroNotaCredito) {
+  const response = await fetch(
+    `${BASE_URL}/descargar-nota-credito-pdf/${numeroNotaCredito}`
+  );
+  if (!response.ok) throw new Error("No se pudo descargar el PDF");
+  return await response.blob();
+}

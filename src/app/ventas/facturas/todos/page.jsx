@@ -4,7 +4,6 @@ import React, { useEffect, useState, useRef } from "react";
 import {
   obtenerFacturas,
   obtenerFacturasAnuladas,
-  anularFactura,
 } from "@/app/services/facturasService";
 import { obtenerClientes } from "@/app/services/clienteServices";
 import { obtenerProductos } from "@/app/services/productosService";
@@ -12,7 +11,38 @@ import BotonVolver from "@/app/components/BotonVolver";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import jsPDF from "jspdf";
-import { descargarFacturaPDF } from "@/app/services/factusService";
+import {
+  descargarFacturaPDF,
+  crearNotaCreditoFactus,
+  descargarNotaCreditoPDF,
+} from "@/app/services/factusService";
+
+const CORRECCION_CONCEPTOS = [
+  {
+    code: 1,
+    name: "Devolución parcial de los bienes y/o no aceptación parcial del servicio.",
+  },
+  { code: 2, name: "Anulación de factura electrónica." },
+  { code: 3, name: "Rebaja o descuento parcial o total." },
+  { code: 4, name: "Ajuste de precio." },
+  { code: 5, name: "Descuento comercial por pronto pago." },
+  { code: 6, name: "Descuento comercial por volumen de ventas." },
+];
+
+const CUSTOMIZATION_IDS = [
+  { code: 20, name: "Nota Crédito que referencia una factura electrónica." },
+  { code: 22, name: "Nota Crédito sin referencia a una factura electrónica." },
+];
+
+const PAYMENT_METHODS = [
+  { code: "10", name: "Efectivo" },
+  { code: "42", name: "Consignación" },
+  { code: "20", name: "Cheque" },
+  { code: "47", name: "Transferencia" },
+  { code: "1", name: "Medio de pago no definido" },
+  { code: "49", name: "Tarjeta Débito" },
+  { code: "48", name: "Tarjeta Crédito" },
+];
 
 export default function TodasFacturas() {
   const [facturas, setFacturas] = useState([]);
@@ -32,6 +62,11 @@ export default function TodasFacturas() {
     nota: null,
     cliente: null,
   });
+  const [correctionConceptCode, setCorrectionConceptCode] = useState("");
+  const [customizationId, setCustomizationId] = useState("");
+  const [paymentMethodCode, setPaymentMethodCode] = useState("");
+  const [creandoNotaCredito, setCreandoNotaCredito] = useState(false);
+  const [notaCreditoGenerada, setNotaCreditoGenerada] = useState(null);
   const toastMostrado = useRef(false);
 
   useEffect(() => {
@@ -313,76 +348,24 @@ export default function TodasFacturas() {
     doc.save(`factura_${numeroFactura || Date.now()}.pdf`);
   }
 
-  async function descargarNotaCreditoPDF(nota, cliente) {
-    const doc = new jsPDF();
-
-    // Cargar imagen logo
-    const logoBase64 = await getBase64FromUrl("/LogoAYM.jpg");
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const logoWidth = 40;
-    const logoHeight = 24;
-    const logoX = (pageWidth - logoWidth) / 2;
-    const logoY = 12;
-
-    doc.addImage(logoBase64, "JPEG", logoX, logoY, logoWidth, logoHeight);
-
-    // Datos empresa
-    let infoY = logoY + logoHeight + 8;
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("AYM ELECTRODOMESTICOS SAS", pageWidth / 2, infoY, {
-      align: "center",
-    });
-    doc.setFont("helvetica", "normal");
-    doc.text("NIT 901.696.712-0", pageWidth / 2, infoY + 7, {
-      align: "center",
-    });
-    doc.text("CL 50 48 06", pageWidth / 2, infoY + 14, { align: "center" });
-    doc.text("Tel: (57) 3007510012", pageWidth / 2, infoY + 21, {
-      align: "center",
-    });
-    doc.text("Amagá - Colombia", pageWidth / 2, infoY + 28, {
-      align: "center",
-    });
-    doc.text("aymelectrodomesticos.sas@gmail.com", pageWidth / 2, infoY + 35, {
-      align: "center",
-    });
-
-    // Título
-    let y = infoY + 45;
-    doc.setFontSize(18).setFont("helvetica", "bold");
-    doc.text("Nota Crédito", 14, y);
-
-    doc.setFontSize(12).setFont("helvetica", "bold");
-    doc.text("Número Nota Crédito:", 14, y + 10);
-    doc.setFont("helvetica", "normal").text(nota.numeroNotaCredito, 70, y + 10);
-
-    doc.setFont("helvetica", "bold").text("Factura Anulada:", 14, y + 18);
-    doc.setFont("helvetica", "normal").text(nota.numeroFactura, 70, y + 18);
-
-    doc.setFont("helvetica", "bold").text("Cliente:", 14, y + 26);
-    doc
-      .setFont("helvetica", "normal")
-      .text(
-        cliente ? `${cliente.nombre} ${cliente.apellido || ""}` : "Desconocido",
-        70,
-        y + 26
-      );
-
-    doc.setFont("helvetica", "bold").text("Motivo de Anulación:", 14, y + 34);
-    doc.setFont("helvetica", "normal").text(nota.motivoAnulacion, 70, y + 34);
-
-    doc.setFont("helvetica", "bold").text("Fecha de Anulación:", 14, y + 42);
-    doc
-      .setFont("helvetica", "normal")
-      .text(new Date(nota.fechaAnulacion).toLocaleString(), 70, y + 42);
-
-    doc.setFont("helvetica", "bold").text("Total:", 14, y + 50);
-    doc
-      .setFont("helvetica", "normal")
-      .text(`$${nota.total.toLocaleString()}`, 70, y + 50);
-
-    doc.save(`nota_credito_${nota.numeroNotaCredito || Date.now()}.pdf`);
+  async function handleDescargarNotaCreditoPDF(numeroNotaCredito) {
+    try {
+      if (!numeroNotaCredito) {
+        toast.error("No se encontró el número de nota crédito.");
+        return;
+      }
+      const blob = await descargarNotaCreditoPDF(numeroNotaCredito);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `NotaCredito_${numeroNotaCredito}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error("Error al descargar la Nota Crédito PDF.");
+    }
   }
 
   function estaAnulada(numeroFactura) {
@@ -394,43 +377,46 @@ export default function TodasFacturas() {
       toast.error("Debe escribir el motivo de anulación.");
       return;
     }
+    if (!correctionConceptCode || !customizationId || !paymentMethodCode) {
+      toast.error("Debe seleccionar todos los campos.");
+      return;
+    }
+    setCreandoNotaCredito(true);
     try {
-      const infoAnulada = await anularFactura(
-        modalAnular.factura.id,
-        motivoAnulacion
-      );
+      const notaCreditoData = {
+        correctionConceptCode,
+        customizationId,
+        paymentMethodCode,
+        observation: motivoAnulacion,
+        facturaId: modalAnular.factura.id,
+      };
+
+      const result = await crearNotaCreditoFactus(notaCreditoData);
+
+      // Obtén la info relevante para el modal
+      const nota = {
+        numeroFactura: modalAnular.factura.numeroFactura,
+        numeroNotaCredito: result?.data?.credit_note?.number,
+        motivoAnulacion: motivoAnulacion,
+        fechaAnulacion: new Date().toISOString(),
+        total: modalAnular.factura.detalles.reduce(
+          (sum, d) => sum + d.subtotal,
+          0
+        ),
+        cliente: getNombreCliente(modalAnular.factura.clienteId),
+      };
+
+      setNotaCreditoGenerada(nota);
       setModalAnular({ abierto: false, factura: null });
       setMotivoAnulacion("");
-      const anuladas = await obtenerFacturasAnuladas();
-      setFacturasAnuladas(anuladas);
-
-      if (infoAnulada) {
-        toast.info(
-          <div>
-            <div>
-              <strong>Factura anulada:</strong> {infoAnulada.numeroFactura}
-            </div>
-            <div>
-              <strong>Nota crédito:</strong> {infoAnulada.numeroNotaCredito}
-            </div>
-            <div>
-              <strong>Motivo:</strong> {infoAnulada.motivoAnulacion}
-            </div>
-            <div>
-              <strong>Fecha:</strong>{" "}
-              {new Date(infoAnulada.fechaAnulacion).toLocaleString()}
-            </div>
-            <div>
-              <strong>Total:</strong> ${infoAnulada.total.toLocaleString()}
-            </div>
-          </div>,
-          { autoClose: false }
-        );
-      } else {
-        toast.success("Factura anulada correctamente.");
-      }
+      setCorrectionConceptCode("");
+      setCustomizationId("");
+      setPaymentMethodCode("");
+      toast.success(result.message || "Nota crédito creada correctamente.");
     } catch (e) {
       toast.error("Error al anular la factura");
+    } finally {
+      setCreandoNotaCredito(false);
     }
   }
 
@@ -481,6 +467,26 @@ export default function TodasFacturas() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       toast.error("Error al descargar el PDF.");
+    }
+  }
+
+  async function handleDescargarNotaCreditoPDF(numeroNotaCredito) {
+    try {
+      if (!numeroNotaCredito) {
+        toast.error("No se encontró el número de nota crédito.");
+        return;
+      }
+      const blob = await descargarNotaCreditoPDF(numeroNotaCredito);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `NotaCredito_${numeroNotaCredito}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error("Error al descargar la Nota Crédito PDF.");
     }
   }
 
@@ -692,11 +698,52 @@ export default function TodasFacturas() {
                 </label>
                 <input
                   type="text"
-                  className="form-control"
+                  className="form-control mb-3"
                   value={motivoAnulacion}
                   onChange={(e) => setMotivoAnulacion(e.target.value)}
                   autoFocus
                 />
+                <label className="form-label">Concepto de Corrección:</label>
+                <select
+                  className="form-select mb-3"
+                  value={correctionConceptCode}
+                  onChange={(e) =>
+                    setCorrectionConceptCode(Number(e.target.value))
+                  }
+                >
+                  <option value="">Seleccione</option>
+                  {CORRECCION_CONCEPTOS.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <label className="form-label">Tipo de Operación:</label>
+                <select
+                  className="form-select mb-3"
+                  value={customizationId}
+                  onChange={(e) => setCustomizationId(Number(e.target.value))}
+                >
+                  <option value="">Seleccione</option>
+                  {CUSTOMIZATION_IDS.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <label className="form-label">Método de Pago:</label>
+                <select
+                  className="form-select"
+                  value={paymentMethodCode}
+                  onChange={(e) => setPaymentMethodCode(e.target.value)}
+                >
+                  <option value="">Seleccione</option>
+                  {PAYMENT_METHODS.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="modal-footer">
                 <button
@@ -704,14 +751,16 @@ export default function TodasFacturas() {
                   onClick={() =>
                     setModalAnular({ abierto: false, factura: null })
                   }
+                  disabled={creandoNotaCredito}
                 >
                   Cancelar
                 </button>
                 <button
                   className="btn btn-danger"
                   onClick={handleAnularFactura}
+                  disabled={creandoNotaCredito}
                 >
-                  Anular
+                  {creandoNotaCredito ? "Anulando..." : "Anular"}
                 </button>
               </div>
             </div>
@@ -777,13 +826,12 @@ export default function TodasFacturas() {
                 <button
                   className="btn btn-success"
                   onClick={() =>
-                    descargarNotaCreditoPDF(
-                      modalNotaCredito.nota,
-                      modalNotaCredito.cliente
+                    handleDescargarNotaCreditoPDF(
+                      modalNotaCredito.nota.numeroNotaCredito
                     )
                   }
                 >
-                  Descargar en PDF
+                  Descargar Nota Crédito en PDF
                 </button>
                 <button
                   className="btn btn-secondary"
@@ -794,6 +842,71 @@ export default function TodasFacturas() {
                       cliente: null,
                     })
                   }
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {notaCreditoGenerada && (
+        <div
+          className="modal fade show"
+          style={{ display: "block", background: "#0008" }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Nota Crédito Generada</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setNotaCreditoGenerada(null)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-2">
+                  <strong>Cliente:</strong> {notaCreditoGenerada.cliente}
+                </div>
+                <div className="mb-2">
+                  <strong>Número de Factura Anulada:</strong>{" "}
+                  {notaCreditoGenerada.numeroFactura}
+                </div>
+                <div className="mb-2">
+                  <strong>Número Nota Crédito:</strong>{" "}
+                  {notaCreditoGenerada.numeroNotaCredito}
+                </div>
+                <div className="mb-2">
+                  <strong>Motivo de Anulación:</strong>{" "}
+                  {notaCreditoGenerada.motivoAnulacion}
+                </div>
+                <div className="mb-2">
+                  <strong>Fecha de Anulación:</strong>{" "}
+                  {new Date(
+                    notaCreditoGenerada.fechaAnulacion
+                  ).toLocaleString()}
+                </div>
+                <div className="mb-2">
+                  <strong>Total:</strong> $
+                  {notaCreditoGenerada.total.toLocaleString()}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-success"
+                  onClick={() =>
+                    handleDescargarNotaCreditoPDF(
+                      notaCreditoGenerada.numeroNotaCredito
+                    )
+                  }
+                >
+                  Descargar Nota Crédito en PDF
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setNotaCreditoGenerada(null)}
                 >
                   Cerrar
                 </button>
