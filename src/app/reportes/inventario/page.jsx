@@ -117,7 +117,11 @@ export default function ReporteInventario() {
                           </span>
                         </td>
                         <td>
-                          {p.activo ? (
+                          {p.cantidadStock === 0 ? (
+                            <span className="badge bg-danger">
+                              No disponible
+                            </span>
+                          ) : p.activo ? (
                             <span className="badge bg-success">Disponible</span>
                           ) : (
                             <span className="badge bg-danger">
