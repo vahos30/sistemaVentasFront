@@ -757,7 +757,36 @@ export default function TodasFacturas() {
                 </button>
                 <button
                   className="btn btn-danger"
-                  onClick={handleAnularFactura}
+                  onClick={() => {
+                    toast.warn(
+                      <div>
+                        <strong>
+                          ¿Está seguro que desea anular esta factura?
+                        </strong>
+                        <div className="mt-2 text-danger">
+                          Esta acción no podrá deshacerse.
+                        </div>
+                        <div className="mt-3 d-flex gap-2 justify-content-end">
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => {
+                              toast.dismiss();
+                              handleAnularFactura();
+                            }}
+                          >
+                            Sí, anular
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => toast.dismiss()}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>,
+                      { autoClose: false }
+                    );
+                  }}
                   disabled={creandoNotaCredito}
                 >
                   {creandoNotaCredito ? "Anulando..." : "Anular"}
