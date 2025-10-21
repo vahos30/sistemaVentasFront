@@ -372,13 +372,23 @@ export default function TodasFacturas() {
     return facturasAnuladas.some((f) => f.numeroFactura === numeroFactura);
   }
 
-  async function handleAnularFactura() {
+  async function handleAnularFactura(toastId) {
     if (!motivoAnulacion.trim()) {
-      toast.error("Debe escribir el motivo de anulación.");
+      toast.update(toastId, {
+        render: "Debe escribir el motivo de anulación.",
+        type: "error",
+        isLoading: false,
+        autoClose: 3000,
+      });
       return;
     }
     if (!correctionConceptCode || !customizationId || !paymentMethodCode) {
-      toast.error("Debe seleccionar todos los campos.");
+      toast.update(toastId, {
+        render: "Debe seleccionar todos los campos.",
+        type: "error",
+        isLoading: false,
+        autoClose: 3000,
+      });
       return;
     }
     setCreandoNotaCredito(true);
@@ -406,15 +416,48 @@ export default function TodasFacturas() {
         cliente: getNombreCliente(modalAnular.factura.clienteId),
       };
 
+      // actualizar estado para mostrar modal e indicación de factura anulada inmediatamente
       setNotaCreditoGenerada(nota);
       setModalAnular({ abierto: false, factura: null });
       setMotivoAnulacion("");
       setCorrectionConceptCode("");
       setCustomizationId("");
       setPaymentMethodCode("");
-      toast.success(result.message || "Nota crédito creada correctamente.");
+
+      // 1) Actualizamos la lista local de facturas anuladas para que la tabla se actualice al instante
+      setFacturasAnuladas((prev) => [
+        ...prev,
+        {
+          numeroFactura: nota.numeroFactura,
+          numeroNotaCredito: nota.numeroNotaCredito,
+          motivoAnulacion: nota.motivoAnulacion,
+          fechaAnulacion: nota.fechaAnulacion,
+          total: nota.total,
+        },
+      ]);
+
+      // 2) (Opcional) refrescar desde el servidor para mantener sincronía con backend
+      try {
+        const anuladasServidor = await obtenerFacturasAnuladas();
+        setFacturasAnuladas(anuladasServidor);
+      } catch (refreshErr) {
+        // si falla el refresco no bloqueamos la UX; el estado local ya muestra el cambio
+        console.warn("No se pudo refrescar facturas anuladas:", refreshErr);
+      }
+
+      toast.update(toastId, {
+        render: result.message || "Nota crédito creada correctamente.",
+        type: "success",
+        isLoading: false,
+        autoClose: 2500,
+      });
     } catch (e) {
-      toast.error("Error al anular la factura");
+      toast.update(toastId, {
+        render: "Error al anular la factura",
+        type: "error",
+        isLoading: false,
+        autoClose: 3500,
+      });
     } finally {
       setCreandoNotaCredito(false);
     }
@@ -769,9 +812,12 @@ export default function TodasFacturas() {
                         <div className="mt-3 d-flex gap-2 justify-content-end">
                           <button
                             className="btn btn-danger btn-sm"
-                            onClick={() => {
+                            onClick={async () => {
                               toast.dismiss();
-                              handleAnularFactura();
+                              const toastId = toast.loading(
+                                "Anulando Factura..."
+                              );
+                              await handleAnularFactura(toastId);
                             }}
                           >
                             Sí, anular

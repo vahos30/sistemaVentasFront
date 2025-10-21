@@ -169,7 +169,6 @@ export default function CrearFacturaLegalPage() {
     setErrores(nuevosErrores);
 
     if (Object.keys(nuevosErrores).length > 0) {
-      // Enfoca el primer select con error
       if (nuevosErrores.formaPago) {
         document.querySelector('select[name="formaPago"]').focus();
       } else if (nuevosErrores.metodoPago) {
@@ -179,6 +178,10 @@ export default function CrearFacturaLegalPage() {
     }
 
     setCreando(true);
+
+    // Toast profesional de "Creando Factura"
+    const toastId = toast.loading("Creando Factura, por favor espere...");
+
     try {
       const detalles = productosFactura.map((p) => ({
         productoId: p.id,
@@ -200,15 +203,26 @@ export default function CrearFacturaLegalPage() {
 
       const data = await crearFacturaLegal(facturaLegal);
       setFacturaCreada({
-        factus: data.data, // respuesta de Factus
-        cliente, // datos completos del cliente
-        formaPago, // código de forma de pago
-        metodoPago, // código de método de pago
-        observacion, // observación
+        factus: data.data,
+        cliente,
+        formaPago,
+        metodoPago,
+        observacion,
       });
-      toast.success("Factura legal creada exitosamente");
+
+      toast.update(toastId, {
+        render: "Factura legal creada exitosamente",
+        type: "success",
+        isLoading: false,
+        autoClose: 2500,
+      });
     } catch (error) {
-      toast.error(error.message || "Error al crear la factura legal");
+      toast.update(toastId, {
+        render: error.message || "Error al crear la factura legal",
+        type: "error",
+        isLoading: false,
+        autoClose: 3500,
+      });
       console.error("Error al crear la factura legal:", error);
     } finally {
       setCreando(false);
