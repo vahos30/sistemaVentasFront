@@ -27,14 +27,26 @@ export default function LoginForm() {
       return;
     }
 
+    // Muestra el toast de cargando
+    const toastId = toast.loading("Cargando...");
+
     try {
       const result = await login(nombreUsuario, contrasena);
-      // Puedes guardar el token en localStorage si lo necesitas:
       localStorage.setItem("token", result.token);
-      toast.success("¡Bienvenido!");
+      toast.update(toastId, {
+        render: "¡Bienvenido!",
+        type: "success",
+        isLoading: false,
+        autoClose: 2000,
+      });
       router.push("/menuPrincipal");
     } catch (error) {
-      toast.error(error.message || "Usuario o contraseña incorrectos.");
+      toast.update(toastId, {
+        render: error.message || "Usuario o contraseña incorrectos.",
+        type: "error",
+        isLoading: false,
+        autoClose: 3000,
+      });
     }
   };
 
