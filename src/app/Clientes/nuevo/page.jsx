@@ -305,6 +305,13 @@ export default function CrearClientePage() {
       ...errors,
       tipoDocumento: "",
     });
+
+    // Si es NIT, seleccionar "No aplica" (id 21) por defecto; si no, limpiar.
+    if (selectedTipo && selectedTipo.nombre === "NIT") {
+      setIdTributo("21");
+    } else {
+      setIdTributo("");
+    }
   };
 
   return (
