@@ -37,6 +37,12 @@ export default function ReportesPage() {
       icono: "bi-cart-check",
       ruta: "/reportes/compras",
     },
+    {
+      texto: "Informe de IVA", // Nuevo botón
+      color: "dark",
+      icono: "bi-receipt",
+      ruta: "/reportes/iva",
+    },
   ];
 
   return (

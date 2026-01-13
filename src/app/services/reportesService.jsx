@@ -1,7 +1,7 @@
-const BASE_URL =
-  "https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Reportes";
+//const BASE_URL ="https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Reportes";
 
 //const BASE_URL = "https://localhost:7062/api/Reportes";
+const BASE_URL = "http://72.61.70.114:5000/api/Reportes";
 
 export async function obtenerInventario() {
   const res = await fetch(`${BASE_URL}/inventario`);
