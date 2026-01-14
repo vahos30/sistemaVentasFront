@@ -1,7 +1,7 @@
 //const BASE_URL ="https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Recibos";
 
 //const BASE_URL = "https://localhost:7062/api/Recibos";
-const BASE_URL = "http://72.61.70.114:5000/api/Recibos";
+const BASE_URL = "https://tecnofrioapi.jvcsoluciones.cloud/api/Recibos";
 
 // Obtener todos los recibos
 export async function obtenerRecibos() {

@@ -1,6 +1,6 @@
 //const BASE_URL ="https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Factus";
 //const BASE_URL = "https://localhost:7062/api/Factus";
-const BASE_URL = "http://72.61.70.114:5000/api/Factus";
+const BASE_URL = "https://tecnofrioapi.jvcsoluciones.cloud/api/Factus";
 
 export async function crearFacturaFactus(datosFactura) {
   const response = await fetch(`${BASE_URL}/crear-factura-factus`, {

@@ -1,4 +1,4 @@
-const API_URL = "http://72.61.70.114:5000/api/Auth"; // Incluye el esquema "http://"
+const API_URL = "https://tecnofrioapi.jvcsoluciones.cloud/api/Auth"; // Incluye el esquema "http://"
 
 export async function login(nombreUsuario, contrasena) {
   const response = await fetch(`${API_URL}/login`, {
