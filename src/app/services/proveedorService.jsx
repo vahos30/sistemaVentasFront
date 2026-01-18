@@ -1,7 +1,9 @@
 //const API_URL ="https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Proveedor"; // URL de la API EN AZURE
 
 //const API_URL = "https://localhost:7062/api/Proveedor";
-const API_URL = "https://tecnofrioapi.jvcsoluciones.cloud/api/Proveedor"; // URL de la API EN PRODUCCIÓN
+//const API_URL = "https://tecnofrioapi.jvcsoluciones.cloud/api/Proveedor"; // URL de la API EN PRODUCCIÓN
+
+const API_URL = "http://72.61.70.114:5001/api/Proveedor";
 
 // Método para obtener todos los proveedores (GET)
 export const obtenerProveedores = async () => {
