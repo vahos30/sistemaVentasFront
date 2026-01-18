@@ -1,0 +1,11 @@
+name: jvc-yireh-pruebas-front
+
+services:
+  jvc-yireh-pruebas-front:
+    build: .
+    container_name: jvc-yireh-pruebas-front
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
