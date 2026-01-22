@@ -2,8 +2,7 @@
 
 //const BASE_URL = "https://localhost:7062/api/Recibos";
 //const BASE_URL = "https://tecnofrioapi.jvcsoluciones.cloud/api/Recibos";
-
-const BASE_URL = "http://72.61.70.114:5001/api/Recibos";
+const BASE_URL = "https://yirehapi.jvcsoluciones.cloud/api/Recibos";
 
 // Obtener todos los recibos
 export async function obtenerRecibos() {

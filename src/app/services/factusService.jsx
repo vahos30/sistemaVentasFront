@@ -2,8 +2,7 @@
 
 //const BASE_URL = "https://localhost:7062/api/Factus";
 //const BASE_URL = "https://tecnofrioapi.jvcsoluciones.cloud/api/Factus";
-
-const BASE_URL = "http://72.61.70.114:5001/api/Factus";
+const BASE_URL = "https://yirehapi.jvcsoluciones.cloud/api/Factus";
 
 export async function crearFacturaFactus(datosFactura) {
   const response = await fetch(`${BASE_URL}/crear-factura-factus`, {
@@ -48,7 +47,7 @@ export async function descargarFacturaPDF(numeroFactura) {
     `${BASE_URL}/descargar-factura-pdf/${numeroFactura}`,
     {
       method: "GET",
-    }
+    },
   );
   if (!response.ok) {
     throw new Error("No se pudo descargar el PDF");
@@ -69,7 +68,7 @@ export async function crearNotaCreditoFactus(data) {
 
 export async function descargarNotaCreditoPDF(numeroNotaCredito) {
   const response = await fetch(
-    `${BASE_URL}/descargar-nota-credito-pdf/${numeroNotaCredito}`
+    `${BASE_URL}/descargar-nota-credito-pdf/${numeroNotaCredito}`,
   );
   if (!response.ok) throw new Error("No se pudo descargar el PDF");
   return await response.blob();

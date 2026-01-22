@@ -2,8 +2,8 @@
 //const BASE_URL = "https://localhost:7062/api/Reportes";
 
 //const BASE_URL = "https://tecnofrioapi.jvcsoluciones.cloud/api/Reportes";
-
-const BASE_URL = "http://72.61.70.114:5001/api/Reportes";
+//const BASE_URL = "http://72.61.70.114:5001/api/Reportes";
+const BASE_URL = "https://yirehapi.jvcsoluciones.cloud/api/Reportes";
 
 export async function obtenerInventario() {
   const res = await fetch(`${BASE_URL}/inventario`);
@@ -19,7 +19,7 @@ export async function obtenerVentasPorCliente(busqueda) {
     (c) =>
       c.numeroDocumento === busqueda.trim() ||
       (c.nombre &&
-        c.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()))
+        c.nombre.toLowerCase().includes(busqueda.trim().toLowerCase())),
   );
   if (!cliente) throw new Error("No se encontró el cliente");
 
@@ -40,8 +40,8 @@ export async function obtenerVentasDiarias() {
 export async function obtenerVentasPorFecha(fechaInicio, fechaFin) {
   const res = await fetch(
     `${BASE_URL}/ventas?fechaInicio=${encodeURIComponent(
-      fechaInicio
-    )}&fechaFin=${encodeURIComponent(fechaFin)}`
+      fechaInicio,
+    )}&fechaFin=${encodeURIComponent(fechaFin)}`,
   );
   if (!res.ok) throw new Error("Error al obtener las ventas por fecha");
   return await res.json();
