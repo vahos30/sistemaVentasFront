@@ -51,7 +51,7 @@ export default function MenuLayout({ children }) {
           </div>
         </div>
       ),
-      { autoClose: false }
+      { autoClose: false },
     );
   };
 
@@ -173,15 +173,15 @@ export default function MenuLayout({ children }) {
                 <i className="bi bi-gear me-3 fs-5"></i>
                 <span>Compras</span>
               </Link>
-              <li className="nav-item">
-                <Link
-                  className="nav-link d-flex align-items-center"
-                  href="/configuracion"
-                >
-                  <i className="bi bi-gear me-3 fs-5"></i>
-                  <span>Configuracion</span>
-                </Link>
-              </li>
+            </li>
+            <li className="nav-item">
+              <Link
+                className="nav-link d-flex align-items-center"
+                href="/configuracion"
+              >
+                <i className="bi bi-gear me-3 fs-5"></i>
+                <span>Configuracion</span>
+              </Link>
             </li>
           </ul>
 
