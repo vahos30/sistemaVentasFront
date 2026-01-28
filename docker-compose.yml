@@ -1,0 +1,11 @@
+name: jvc-tecnofrio-front
+
+services:
+   jvc-tecnofrio-front:
+    build: .
+    container_name: jvc-tecnofrio-front
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
