@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import {
   obtenerClientePorId,
   actualizarCliente,
@@ -12,16 +12,19 @@ import BotonVolver from "@/app/components/BotonVolver";
 import Loader from "@/app/components/Loader";
 import { toast } from "react-toastify";
 
-export default function EditarCliente({ params }) {
+export default function EditarCliente() {
+  const { id } = useParams();
+  const router = useRouter();
+
   const [cliente, setCliente] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [errores, setErrores] = useState({});
   const [enviando, setEnviando] = useState(false);
-  const router = useRouter();
-  const { id } = params;
 
   // Cargar cliente al montar el componente
   useEffect(() => {
+    if (!id) return;
+
     const cargarCliente = async () => {
       try {
         const data = await obtenerClientePorId(id);
