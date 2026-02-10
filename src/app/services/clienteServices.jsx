@@ -1,8 +1,5 @@
 // src/services/clienteService.jsAdd commentMore actions
-//const API_URL ="https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Clientes";
-//const API_URL = "https://localhost:7062/api/Clientes";
-//const API_URL = "http://72.61.70.114:5001/api/Clientes";
-const API_URL = "https://yirehapi.jvcsoluciones.cloud/api/Clientes";
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/Clientes`;
 
 //Metodo para obtener todos los clientes
 export const obtenerClientes = async () => {

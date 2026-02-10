@@ -1,7 +1,4 @@
-//const BASE_URL ="https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Facturas";
-//const BASE_URL = "https://localhost:7062/api/Facturas";
-//const BASE_URL = "https://tecnofrioapi.jvcsoluciones.cloud/api/Facturas";
-const BASE_URL = "https://yirehapi.jvcsoluciones.cloud/api/Facturas";
+const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/Facturas`;
 
 // Obtener todas las facturas
 export async function obtenerFacturas() {

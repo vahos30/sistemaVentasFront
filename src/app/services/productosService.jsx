@@ -1,8 +1,4 @@
-//const BASE_URL ="https://sistemainventarioapi20251005143405-fbcybrh3f2f8caeu.centralus-01.azurewebsites.net/api/Productos";
-
-//const BASE_URL = "https://localhost:7062/api/Productos";
-//const BASE_URL = "https://tecnofrioapi.jvcsoluciones.cloud/api/Productos";
-const BASE_URL = "https://yirehapi.jvcsoluciones.cloud/api/Productos";
+const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/Productos`;
 
 // Obtener todos los productos
 export async function obtenerProductos() {
