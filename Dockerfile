@@ -5,6 +5,7 @@ WORKDIR /app
 
 # Copia los archivos de tu aplicación al contenedor
 COPY package.json package-lock.json ./
+COPY .env.production .env.production
 RUN npm install
 
 # Copia el resto de la aplicación
