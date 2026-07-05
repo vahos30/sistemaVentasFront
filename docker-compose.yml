@@ -1,12 +1,12 @@
-name: jvc-yireh-pruebas-front
+name: jvc-electro-estilo-front
 
 services:
-  jvc-yireh-pruebas-front:
+  jvc-electro-estilo-front:
     build: .
-    container_name: jvc-yireh-pruebas-front
+    container_name: jvc-electro-estilo-front
     restart: always
     ports:
-      - "3001:3000"
+      - "3002:3000"
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=https://yirehapi.jvcsoluciones.cloud/api
