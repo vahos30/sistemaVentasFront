@@ -14,8 +14,8 @@ COPY . .
 # Construye la aplicación
 RUN npm run build
 
-# Expone el puerto 3000
-EXPOSE 3000
+# Expone el puerto 3002
+EXPOSE 3002
 
 # Inicia la aplicación en modo producción
 CMD ["npm", "start"]
