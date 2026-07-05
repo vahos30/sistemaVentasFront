@@ -312,39 +312,54 @@ export default function CrearReciboPage() {
     const doc = new jsPDF();
     const numeroRecibo = recibo.id ? recibo.id.slice(-12) : "";
 
-    // Cargar imagen logo
-    const logoBase64 = await getBase64FromUrl("/LogoAYM.jpg");
+    // Cargar imagen logo (archivo en /public)
+    const logoBase64 = await getBase64FromUrl("/Logo-Electro-Estilo.png");
 
     // Centrar logo
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Dibuja un fondo suave en la página actual. Se aplica también en nuevas páginas.
+    const drawBackground = () => {
+      // Color suave (muy claro) — ajusta RGB si deseas otro tono
+      doc.setFillColor(245, 247, 250);
+      // Cubrir toda la página
+      doc.rect(0, 0, pageWidth, pageHeight, "F");
+      // Opcional: contorno sutil
+      doc.setDrawColor(230);
+      doc.setLineWidth(0.2);
+      doc.rect(8, 8, pageWidth - 16, pageHeight - 16);
+    };
+    // Pintar fondo antes de agregar elementos (logo, textos)
+    drawBackground();
     const logoWidth = 40;
     const logoHeight = 24;
     const logoX = (pageWidth - logoWidth) / 2;
     const logoY = 12;
 
-    doc.addImage(logoBase64, "JPEG", logoX, logoY, logoWidth, logoHeight);
+    doc.addImage(logoBase64, "PNG", logoX, logoY, logoWidth, logoHeight);
 
     // Centrar datos empresa debajo del logo, con espacio extra
     let infoY = logoY + logoHeight + 8;
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("AYM ELECTRODOMESTICOS SAS", pageWidth / 2, infoY, {
+    doc.text("ELECTRO ESTILO", pageWidth / 2, infoY, {
       align: "center",
     });
     doc.setFont("helvetica", "normal");
-    doc.text("NIT 901.696.712-0", pageWidth / 2, infoY + 7, {
+    doc.text("NIT 1128398739-8", pageWidth / 2, infoY + 7, {
       align: "center",
     });
-    doc.text("CL 50 48 06", pageWidth / 2, infoY + 14, {
+    doc.text("Carrera 99 # 65-265 ", pageWidth / 2, infoY + 14, {
       align: "center",
     });
-    doc.text("Tel: (57) 3007510012", pageWidth / 2, infoY + 21, {
+    doc.text("Tel: (57) 321 5657491", pageWidth / 2, infoY + 21, {
       align: "center",
     });
-    doc.text("Amagá - Colombia", pageWidth / 2, infoY + 28, {
+    doc.text("Medellín - Colombia", pageWidth / 2, infoY + 28, {
       align: "center",
     });
-    doc.text("aymelectrodomesticos.sas@gmail.com", pageWidth / 2, infoY + 35, {
+    doc.text("gerenciacomercial@electroestilo.com", pageWidth / 2, infoY + 35, {
       align: "center",
     });
 
@@ -352,7 +367,7 @@ export default function CrearReciboPage() {
     let y = infoY + 45;
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("Recibo de Compra", 14, y);
+    doc.text("Recibo de Venta", 14, y);
 
     // Datos del recibo
     doc.setFontSize(12);
@@ -453,6 +468,8 @@ export default function CrearReciboPage() {
       // Salto de página si es necesario
       if (y > 270) {
         doc.addPage();
+        // aplicar fondo a la nueva página
+        drawBackground();
         y = 20;
       }
     });
