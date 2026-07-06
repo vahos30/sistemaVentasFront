@@ -9,4 +9,4 @@ services:
       - "3002:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://72.61.70.114:5002/api
+      - NEXT_PUBLIC_API_URL=https://electroestiloapi.jvcsoluciones.cloud/api
