@@ -143,7 +143,7 @@ export default function TodosRecibos() {
     const numeroRecibo = recibo.id.slice(-12);
 
     // Cargar imagen logo
-    const logoBase64 = await getBase64FromUrl("/LogoAYM.jpg");
+    const logoBase64 = await getBase64FromUrl("/Logo-Electro-Estilo.png");
 
     // Centrar logo
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -152,27 +152,27 @@ export default function TodosRecibos() {
     const logoX = (pageWidth - logoWidth) / 2;
     const logoY = 12;
 
-    doc.addImage(logoBase64, "JPEG", logoX, logoY, logoWidth, logoHeight);
+    doc.addImage(logoBase64, "PNG", logoX, logoY, logoWidth, logoHeight);
 
     // Centrar datos empresa debajo del logo, con espacio extra
     let infoY = logoY + logoHeight + 8;
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("AYM ELECTRODOMESTICOS SAS", pageWidth / 2, infoY, {
+    doc.text("ELECTRO ESTILO", pageWidth / 2, infoY, {
       align: "center",
     });
     doc.setFont("helvetica", "normal");
-    doc.text("NIT 901.696.712-0", pageWidth / 2, infoY + 7, {
+    doc.text("NIT 1128398739-8", pageWidth / 2, infoY + 7, {
       align: "center",
     });
-    doc.text("CL 50 48 06", pageWidth / 2, infoY + 14, { align: "center" });
-    doc.text("Tel: (57) 3007510012", pageWidth / 2, infoY + 21, {
+    doc.text("Carrera 99 # 65-265", pageWidth / 2, infoY + 14, { align: "center" });
+    doc.text("Tel: (57) 321 5657491", pageWidth / 2, infoY + 21, {
       align: "center",
     });
-    doc.text("Amagá - Colombia", pageWidth / 2, infoY + 28, {
+    doc.text("Medellín - Colombia", pageWidth / 2, infoY + 28, {
       align: "center",
     });
-    doc.text("aymelectrodomesticos.sas@gmail.com", pageWidth / 2, infoY + 35, {
+    doc.text("gerenciacomercial@electroestilo.com", pageWidth / 2, infoY + 35, {
       align: "center",
     });
 
