@@ -143,7 +143,7 @@ export default function TodosRecibos() {
     const numeroRecibo = recibo.id.slice(-12);
 
     // Cargar imagen logo
-    const logoBase64 = await getBase64FromUrl("/LogoAYM.jpg");
+    const logoBase64 = await getBase64FromUrl("/logo_tecnofrio.png");
 
     // Centrar logo
     const pageWidth = doc.internal.pageSize.getWidth();
