@@ -161,21 +161,21 @@ export default function TodosRecibos() {
     let infoY = logoY + logoHeight + 8;
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("AYM ELECTRODOMESTICOS SAS", pageWidth / 2, infoY, {
+    doc.text("TECNOFRIO DISTRIBUCIONES S.A.S", pageWidth / 2, infoY, {
       align: "center",
     });
     doc.setFont("helvetica", "normal");
-    doc.text("NIT 901.696.712-0", pageWidth / 2, infoY + 7, {
+    doc.text("NIT 901.959.460-1", pageWidth / 2, infoY + 7, {
       align: "center",
     });
-    doc.text("CL 50 48 06", pageWidth / 2, infoY + 14, { align: "center" });
-    doc.text("Tel: (57) 3007510012", pageWidth / 2, infoY + 21, {
+    doc.text("CARRERA 99 # 65 265", pageWidth / 2, infoY + 14, { align: "center" });
+    doc.text("Tel: (57) 324 2630244", pageWidth / 2, infoY + 21, {
       align: "center",
     });
-    doc.text("Amagá - Colombia", pageWidth / 2, infoY + 28, {
+    doc.text("Medellín - Colombia", pageWidth / 2, infoY + 28, {
       align: "center",
     });
-    doc.text("aymelectrodomesticos.sas@gmail.com", pageWidth / 2, infoY + 35, {
+    doc.text("administracion@tecnofriodistribuciones.com.co", pageWidth / 2, infoY + 35, {
       align: "center",
     });
 
