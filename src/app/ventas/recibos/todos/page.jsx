@@ -125,7 +125,10 @@ export default function TodosRecibos() {
   };
 
   async function getBase64FromUrl(url) {
-    const response = await fetch(url);
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`No se pudo cargar la imagen del logo: ${url}`);
+    }
     const blob = await response.blob();
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -143,7 +146,7 @@ export default function TodosRecibos() {
     const numeroRecibo = recibo.id.slice(-12);
 
     // Cargar imagen logo
-    const logoBase64 = await getBase64FromUrl("/logo_tecnofrio.png");
+    const logoBase64 = await getBase64FromUrl("/logo-tecnofrio.png");
 
     // Centrar logo
     const pageWidth = doc.internal.pageSize.getWidth();
